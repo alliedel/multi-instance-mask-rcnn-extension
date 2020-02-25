@@ -3,6 +3,9 @@ import gc
 import numpy as np
 from PIL import Image
 
+import pickle
+from fvcore.common.file_io import PathManager
+import copy
 from detectron2.config import get_cfg
 import subprocess
 import os
@@ -22,6 +25,39 @@ DETECTRON_REPO = './detectron2_repo'
 
 def dbprint(*args, **kwargs):
     print(*args, **kwargs)
+
+
+def make_multihead_state_from_single_head_state(existing_weights_filename,
+                                                new_weights_filename,
+                                                src_parent_name='roi_heads.mask_head',
+                                                dst_parent_names=('roi_heads.standard_mask_head',
+                                                                  'roi_heads.custom_mask_head'),
+                                                remove_src_keys=True):
+    if existing_weights_filename.endswith(".pkl"):
+        with open(existing_weights_filename, "rb") as f:
+            existing_state = pickle.load(f, encoding="latin1")
+    else:
+        existing_state = torch.load(existing_weights_filename)
+    extra_state = {}
+    src_keys_copied = []
+    src_found = False
+    for src_key in existing_state['model']:
+        if src_key.startswith(src_parent_name):
+            src_found = True
+            src_keys_copied.append(src_key)
+            for dst_parent_name in dst_parent_names:
+                extra_state[src_key.replace(src_parent_name, dst_parent_name)] = \
+                    copy.deepcopy(existing_state['model'][src_key])
+    if not src_found:
+        raise Exception(f"{src_parent_name} not found in {existing_weights_filename}")
+    if remove_src_keys:
+        for src_key in src_keys_copied:
+            existing_state['model'].pop(src_key)
+    existing_state['model'].update(extra_state)
+    if existing_weights_filename.endswith(".pkl"):
+        pickle.dump(existing_state, open(new_weights_filename, 'wb'))
+    else:
+        torch.save(existing_state, new_weights_filename)
 
 
 def download_detectron_model_to_local_zoo(relpath):
@@ -44,8 +80,14 @@ def download_detectron_model_to_local_zoo(relpath):
 
 
 def get_custom_maskrcnn_cfg(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/"
-                                            "mask_rcnn_R_50_FPN_3x_APD.yaml"):
-    return get_maskrcnn_cfg(config_filepath)
+"mask_rcnn_R_50_FPN_3x_APD.yaml"):
+    cfg = get_maskrcnn_cfg(config_filepath)
+    standard_state_file = cfg.MODEL.WEIGHTS
+    ext = os.path.splitext(standard_state_file)[1]
+    multiinst_state_file = standard_state_file.replace(f'{ext}', f'_multiinst_heads_apd{ext}')
+    make_multihead_state_from_single_head_state(standard_state_file, multiinst_state_file)
+    cfg.MODEL.WEIGHTS = multiinst_state_file
+    return cfg
 
 
 def get_maskrcnn_cfg(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"):
@@ -388,3 +430,18 @@ def build_dataloader(cfg):
     }
     train_dataloader = DefaultTrainer.build_train_loader(cfg)
     return train_dataloader
+
+
+def convert_datapoint_to_image_format(img, out_shape, cfg):
+    if img.shape[0] == 3:
+        img = img.permute(1, 2, 0)
+    if cfg.INPUT.FORMAT == "BGR":
+        img = np.asarray(img[:, :, [2, 1, 0]])
+    else:
+        img = np.asarray(Image.fromarray(img, mode=cfg.INPUT.FORMAT).convert("RGB"))
+    if cfg.INPUT.FORMAT == "BGR":
+        img = np.asarray(img[:, :, [2, 1, 0]])
+    else:
+        img = np.asarray(Image.fromarray(img, mode=cfg.INPUT.FORMAT).convert("RGB"))
+    img = cv2.resize(img, out_shape[::-1])
+    return img
