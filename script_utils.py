@@ -319,7 +319,7 @@ def visualize(img, metadata, instances, proposals, image_id, extra_proposal_deta
         proposals_past_thresh = proposals_past_thresh.to('cpu')
         v = v.draw_instance_predictions(proposals_past_thresh)
         cv2_imshow(v.get_image()[:, :, ::-1])
-        exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + 'proposals_past_thresh')
+        exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_proposals_past_thresh')
 
     if selected_proposal_idxs is not None:
         assert len(selected_proposal_idxs) == len(instances['instances'])

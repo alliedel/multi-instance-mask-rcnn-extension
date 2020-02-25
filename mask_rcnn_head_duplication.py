@@ -15,11 +15,12 @@ import torch
 import torch.distributed
 from PIL import Image
 
+from detectron2.modeling.roi_heads.multi_instance_roi_heads import MultiROIHeadsAPD
 from detectron2.engine import DefaultPredictor
 from detectron2.engine import DefaultTrainer
 from detectron2.evaluation.evaluator import inference_context
 from script_utils import FigExporter, get_maskrcnn_cfg, get_custom_maskrcnn_cfg, DETECTRON_REPO, \
-    run_vanilla_evaluation, run_evaluation, get_datapoint_file, collate_figures
+    run_evaluation, get_datapoint_file, collate_figures
 
 exporter_ = None
 
@@ -30,15 +31,6 @@ def dbprint(*args, **kwargs):
 
 def equal_ids(id1, id2):
     return str(id1).rstrip('0') == str(id2).rstrip('0')
-
-
-def run_vanilla_inference(predictor, inputs, train=False):
-    if train is False:
-        with inference_context(predictor.model), torch.no_grad():
-            outputs = predictor.model(inputs)
-    else:
-        outputs = predictor.model(inputs)
-    return outputs
 
 
 def run_inference(predictor, inputs):
@@ -104,6 +96,11 @@ def main(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/ma
         'custom': DefaultPredictor(custom_cfg),
         'standard': DefaultPredictor(cfg)
     }
+    assert isinstance(predictors['custom'].model.roi_heads, MultiROIHeadsAPD)
+    predictors['custom'].model.roi_heads.active_mask_head_name = 'custom'
+    if isinstance(predictors['standard'].model.roi_heads, MultiROIHeadsAPD):
+        predictors['standard'].model.roi_heads.active_mask_head_name = 'standard'
+
     rls = [False, True] if flip_lr is True else [False]
     for rl in rls:
         for image_id in image_ids:
@@ -125,9 +122,6 @@ def main(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/ma
             for predictor_type, predictor in predictors.items():
                 # n_existing_exporter_images = len(exporter_.generated_figures)
                 cfg_tag = ('_flip' if rl else '') + f"_{predictor_type}"
-                # output = run_vanilla_inference(predictors[predictor_type], datapoint, train=False)
-                # run_vanilla_evaluation(input_images, cfg, output, image_ids=[str(d['image_id']) + cfg_tag for d in datapoint],
-                #                        model=predictors[predictor_type].model, exporter=exporter)
 
                 n_existing_exporter_images = len(exporter_.generated_figures)
                 outputs_d = run_inference(predictors['standard'], datapoint)
@@ -137,7 +131,8 @@ def main(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/ma
                 my_image_ids = [str(d['image_id']) + cfg_tag for d in datapoint]
                 for my_image_id in my_image_ids:
                     figure_name = os.path.splitext(os.path.basename(__file__))[0] + '_' + my_image_id + '_collated'
-                    collate_figures(exporter_.generated_figures[n_existing_exporter_images:], figure_name, exporter=exporter)
+                    collate_figures(exporter_.generated_figures[n_existing_exporter_images:], figure_name,
+                                    exporter=exporter)
 
 
 if __name__ == '__main__':
