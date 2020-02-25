@@ -1,0 +1,12 @@
+.idea
+*.*~
+*.pt
+__pycache__
+balloon
+balloon_dataset.zip
+.ipynb_checkpoints/
+datasets
+output/*
+*.jpg
+*.mp4
+
