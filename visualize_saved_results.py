@@ -5,7 +5,8 @@ from detectron2.data import MetadataCatalog
 from detectron2.utils.visualizer import Visualizer
 
 
-from script_utils import cv2_imshow, FigExporter, get_maskrcnn_cfg
+from script_utils import FigExporter, get_maskrcnn_cfg
+from vis_utils import cv2_imshow
 
 with open('output/mask_rcnn_R_50_FPN_3x/filelist_train.txt', 'r') as f:
     image_filenames = [s.strip() for s in f.readlines()]

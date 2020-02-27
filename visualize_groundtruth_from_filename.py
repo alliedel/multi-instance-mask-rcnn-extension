@@ -6,7 +6,8 @@ from detectron2.utils.visualizer import Visualizer
 import os
 import tempfile
 
-from script_utils import get_maskrcnn_cfg, cv2_imshow, FigExporter
+from script_utils import get_maskrcnn_cfg, FigExporter
+from vis_utils import cv2_imshow
 
 
 def get_splits_and_ids_for_image_ids(image_ids, list_of_image_ids):

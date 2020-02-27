@@ -12,7 +12,8 @@ import cv2
 import os
 import matplotlib.pyplot as plt
 import torch
-from script_utils import FigExporter, cv2_imshow, get_maskrcnn_cfg, DETECTRON_REPO
+from script_utils import FigExporter, get_maskrcnn_cfg, DETECTRON_REPO
+from vis_utils import cv2_imshow
 from detectron2.engine import DefaultPredictor
 
 

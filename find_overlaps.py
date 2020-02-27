@@ -1,6 +1,7 @@
 import os
 
-from script_utils import get_cfg, DETECTRON_REPO, cv2_imshow, FigExporter
+from script_utils import get_cfg, DETECTRON_REPO, FigExporter
+from vis_utils import cv2_imshow
 
 
 def outfile_from_filename(filename):

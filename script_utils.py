@@ -4,7 +4,6 @@ import numpy as np
 from PIL import Image
 
 import pickle
-from fvcore.common.file_io import PathManager
 import copy
 from detectron2.config import get_cfg
 import subprocess
@@ -15,8 +14,9 @@ from detectron2.engine import DefaultTrainer
 from detectron2.evaluation.evaluator import inference_context
 from detectron2.data import MetadataCatalog
 from detectron2.modeling import detector_postprocess
-from detectron2.utils.visualizer import Visualizer
 import matplotlib.pyplot as plt
+
+from vis_utils import visualize_output_dict, input_img_to_rgb
 
 DETECTRON_MODEL_ZOO = os.path.expanduser('~/data/models/detectron_model_zoo')
 assert os.path.isdir(DETECTRON_MODEL_ZOO)
@@ -215,28 +215,6 @@ def get_image_identifiers(data_loader, identifier_strings=('file_name', 'image_i
     return all_identifiers
 
 
-def display_instances_on_image(image, instance_output_dict, cfg):
-    """
-    :param image: numpy array (HxWx3)
-    :param instance_output_dict: {
-                                  'pred_boxes': (n_instances,4),
-                                  'scores': (n_instances,),
-                                  'pred_classes': (n_instances,),
-                                  'pred_masks': (n_instances, H, W)
-                                  }
-    :return: Nothing.  Displays on current cv figure.
-
-    """
-    v = Visualizer(image, MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
-    v = v.draw_instance_predictions(instance_output_dict["instances"].to("cpu"))
-    cv2_imshow(v.get_image()[:, :, ::-1])
-
-
-def cv2_imshow(img):
-    h = plt.imshow(img)
-    return h
-
-
 class FigExporter(object):
     fig_number = 1
     workspace_dir = '/home/adelgior/workspace/images'
@@ -286,103 +264,44 @@ def run_vanilla_evaluation(images, cfg, outputs, image_ids, model=None, exporter
         # d. Visualize and export Mask R-CNN predictions
         metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
         proposal_score_thresh = None if model is None else model.roi_heads.test_score_thresh
-        visualize(img, metadata, instances=output, proposals=None, image_id=str(image_id),
-                  extra_proposal_details=None,
-                  scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter)
+        visualize_output_dict(img, metadata, instances=output, proposals=None, image_id=str(image_id),
+                              extra_proposal_details=None,
+                              scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter)
 
 
 def run_evaluation(images, cfg, outputs_d, image_ids, model=None, exporter=None):
     outputs = outputs_d.pop('outputs')
     proposalss = outputs_d.pop('proposalss')
     extra_proposal_detailss = outputs_d.pop('extra_proposal_details', None)
+
     if type(extra_proposal_detailss) is dict:
         extra_proposal_detailss = dictoflists_to_listofdicts(extra_proposal_detailss)
 
     for img, output, proposals, extra_proposal_details, image_id in \
             zip(images, outputs, proposalss, extra_proposal_detailss, image_ids):
-        if img.shape[2] == 3:
-            output_size = img.shape[:2]
-        else:
-            output_size = img.shape[1:]
-        if proposals.image_size != output_size:
-            proposals = detector_postprocess(proposals, output_size[0], output_size[1])
-        if output['instances'].image_size != output_size:
-            # for some reason, it wants an extra dimension...
-            B, H, W = output['instances'].pred_masks.shape
-            output['instances'].pred_masks = output['instances'].pred_masks.resize(B, 1, H, W)
-            output['instances'] = detector_postprocess(output['instances'], output_size[0], output_size[1])
-        if img.shape[0] == 3:
-            img = img.permute(1, 2, 0)
-        if cfg.INPUT.FORMAT == "BGR":
-            img = np.asarray(img[:, :, [2, 1, 0]])
-        else:
-            img = np.asarray(Image.fromarray(img, mode=cfg.INPUT.FORMAT).convert("RGB"))
+        img, proposals = prep_for_visualization(cfg, img, output, proposals)
         # d. Visualize and export Mask R-CNN predictions
         metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
         proposal_score_thresh = None if model is None else model.roi_heads.test_score_thresh
-        visualize(img, metadata, instances=output, proposals=proposals, image_id=str(image_id),
-                  extra_proposal_details=extra_proposal_details,
-                  scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter)
+        visualize_output_dict(img, metadata, instances=output, proposals=proposals, image_id=str(image_id),
+                              extra_proposal_details=extra_proposal_details,
+                              scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter)
 
 
-def visualize(img, metadata, instances, proposals, image_id, extra_proposal_details=None,
-              scale=2.0, map_instance_to_proposal_vis=True, proposal_score_thresh=None, exporter=None):
-    if img is not None:
-        cv2_imshow(img[:, :, ::-1].astype('uint8'))
-        exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_input')
-
-    if proposals is not None:
-        v = Visualizer(img[:, :, ::-1], metadata=metadata, scale=scale)
-        v._default_font_size = v._default_font_size * 1.5
-        proposals.pred_boxes = proposals.proposal_boxes
-        v = v.draw_instance_predictions(proposals.to('cpu'))
-        cv2_imshow(v.get_image()[:, :, ::-1])
-        exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_proposals')
-
-    if extra_proposal_details is not None:
-        selected_proposal_idxs = extra_proposal_details['selected_proposal_idxs']
+def prep_for_visualization(cfg, img, output, proposals):
+    if img.shape[2] == 3:
+        output_size = img.shape[:2]
     else:
-        selected_proposal_idxs = None
-
-    if extra_proposal_details is not None:
-        extra_proposal_details['scores'] = extra_proposal_details['scores'].to('cpu')
-        proposal_subset = (extra_proposal_details['scores'][:, :-1] > proposal_score_thresh).nonzero()
-        proposal_subset_inds = proposal_subset[:, 0]
-        proposal_subset_classes = proposal_subset[:, 1]
-        proposals_past_thresh = proposals[proposal_subset_inds]
-        v = Visualizer(img[:, :, ::-1], metadata=metadata, scale=scale)
-        v._default_font_size = v._default_font_size * 1.5
-        proposals_past_thresh.pred_boxes = proposals_past_thresh.proposal_boxes
-        if map_instance_to_proposal_vis:
-            proposals_past_thresh.scores = extra_proposal_details['scores'][
-                proposal_subset[:, 0], proposal_subset[:, 1]]
-            proposals_past_thresh.pred_classes = proposal_subset_classes
-
-        proposals_past_thresh = proposals_past_thresh.to('cpu')
-        v = v.draw_instance_predictions(proposals_past_thresh)
-        cv2_imshow(v.get_image()[:, :, ::-1])
-        exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_proposals_past_thresh')
-
-    if selected_proposal_idxs is not None:
-        assert len(selected_proposal_idxs) == len(instances['instances'])
-        v = Visualizer(img[:, :, ::-1], metadata=metadata, scale=scale)
-        v._default_font_size = v._default_font_size * 1.5
-        proposals_selected = proposals[selected_proposal_idxs]
-        proposals_selected.pred_boxes = proposals_selected.proposal_boxes
-        if map_instance_to_proposal_vis:
-            proposals_selected.scores = instances['instances'].scores
-            proposals_selected.pred_classes = instances['instances'].pred_classes
-
-        v = v.draw_instance_predictions(proposals_selected.to('cpu'))
-        cv2_imshow(v.get_image()[:, :, ::-1])
-        exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_selected_proposals')
-
-    if instances is not None:
-        v = Visualizer(img[:, :, ::-1], metadata=metadata, scale=scale)
-        v._default_font_size = v._default_font_size * 1.5
-        v = v.draw_instance_predictions(instances["instances"].to("cpu"))
-        cv2_imshow(v.get_image()[:, :, ::-1])
-        exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_prediction')
+        output_size = img.shape[1:]
+    if proposals.image_size != output_size:
+        proposals = detector_postprocess(proposals, output_size[0], output_size[1])
+    if output['instances'].image_size != output_size:
+        # for some reason, it wants an extra dimension...
+        B, H, W = output['instances'].pred_masks.shape
+        output['instances'].pred_masks = output['instances'].pred_masks.resize(B, 1, H, W)
+        output['instances'] = detector_postprocess(output['instances'], output_size[0], output_size[1])
+    img = input_img_to_rgb(img, cfg)
+    return img, proposals
 
 
 def find_datapoint(dataloader, image_id):
@@ -412,14 +331,6 @@ def get_datapoint_file(cfg, image_id):
         gc.collect()
         del dataloader
     return saved_input_file
-
-
-def collate_figures(figures, figure_name, exporter):
-    out_fig = cv2.hconcat([cv2.imread(f) for f in figures])
-    fname = os.path.join(exporter.workspace_dir, figure_name + '.png')
-    cv2.imwrite(fname.replace('.png', '_fullres.png'), out_fig)
-    cv2_imshow(out_fig.astype('uint8'))
-    exporter.export_gcf(figure_name)
 
 
 def build_dataloader(cfg):
