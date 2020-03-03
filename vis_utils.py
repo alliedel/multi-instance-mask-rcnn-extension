@@ -34,9 +34,11 @@ def cv2_imshow(img):
     return h
 
 
-def visualize_output_dict(img, metadata, instances, proposals, image_id, extra_proposal_details=None,
-                          scale=2.0, map_instance_to_proposal_vis=True, proposal_score_thresh=None, exporter=None):
-    if img is not None:
+def visualize_single_image_output(img, metadata, instances, proposals, image_id, extra_proposal_details=None,
+                                  scale=2.0, map_instance_to_proposal_vis=True, proposal_score_thresh=None, exporter=None,
+                                  visualize_just_image=False):
+    assert img is not None
+    if visualize_just_image:
         cv2_imshow(img[:, :, ::-1].astype('uint8'))
         exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_input')
 
@@ -61,6 +63,11 @@ def visualize_output_dict(img, metadata, instances, proposals, image_id, extra_p
     if instances is not None:
         show_prediction(img, instances, metadata, scale)
         exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_prediction')
+
+
+def show_single_instance_prediction(img, metadata, instance, image_id, scale=2.0, exporter=None,
+                                    visualize_just_image=False):
+    show_prediction(img, {'instances': [instance]}, metadata, scale)
 
 
 def show_prediction(img, instances, metadata, scale=2.0):
@@ -112,9 +119,11 @@ def show_proposals(img, proposals, metadata, scale=2.0, default_size_multiplier=
 def collate_figures(figures, figure_name, exporter):
     out_fig = cv2.hconcat([cv2.imread(f) for f in figures])
     fname = os.path.join(exporter.workspace_dir, figure_name + '.png')
-    cv2.imwrite(fname.replace('.png', '_fullres.png'), out_fig)
+    fullres_name = fname.replace('.png', '_fullres.png')
+    cv2.imwrite(fullres_name, out_fig)
     cv2_imshow(out_fig.astype('uint8'))
     exporter.export_gcf(figure_name)
+    return fullres_name
 
 
 def show_groundtruth(datapoint, cfg, scale=2.0):

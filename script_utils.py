@@ -16,7 +16,7 @@ from detectron2.data import MetadataCatalog
 from detectron2.modeling import detector_postprocess
 import matplotlib.pyplot as plt
 
-from vis_utils import visualize_output_dict, input_img_to_rgb
+from vis_utils import visualize_single_image_output, input_img_to_rgb
 
 DETECTRON_MODEL_ZOO = os.path.expanduser('~/data/models/detectron_model_zoo')
 assert os.path.isdir(DETECTRON_MODEL_ZOO)
@@ -79,8 +79,8 @@ def download_detectron_model_to_local_zoo(relpath):
     return outpath
 
 
-def get_custom_maskrcnn_cfg(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/"
-"mask_rcnn_R_50_FPN_3x_APD.yaml"):
+def get_custom_maskrcnn_cfg(
+        config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x_APD.yaml"):
     cfg = get_maskrcnn_cfg(config_filepath)
     standard_state_file = cfg.MODEL.WEIGHTS
     ext = os.path.splitext(standard_state_file)[1]
@@ -217,19 +217,27 @@ def get_image_identifiers(data_loader, identifier_strings=('file_name', 'image_i
 
 class FigExporter(object):
     fig_number = 1
-    workspace_dir = '/home/adelgior/workspace/images'
-    generated_figures = []
+
+    def __init__(self):
+        self.workspace_dir = '/home/adelgior/workspace/images'
+        self.generated_figures = []
+        self.ext = '.png'
+        self.num_fmt = '{:06d}'
+
+    @property
+    def curr_fig_number_as_str(self):
+        return self.num_fmt.format(self.fig_number)
 
     def export_gcf(self, tag=None, use_number=True):
 
         if tag is None:
             assert use_number
-            basename = '{:06d}.png'.format(self.fig_number)
+            basename = self.curr_fig_number_as_str + self.ext
         else:
             if use_number:
-                basename = '{:06d}_{}.png'.format(self.fig_number, tag)
+                basename = self.curr_fig_number_as_str + '_' + tag + self.ext
             else:
-                basename = '{}.png'.format(tag)
+                basename = tag + self.ext
 
         fname = os.path.join(self.workspace_dir, basename)
 
@@ -264,44 +272,53 @@ def run_vanilla_evaluation(images, cfg, outputs, image_ids, model=None, exporter
         # d. Visualize and export Mask R-CNN predictions
         metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
         proposal_score_thresh = None if model is None else model.roi_heads.test_score_thresh
-        visualize_output_dict(img, metadata, instances=output, proposals=None, image_id=str(image_id),
-                              extra_proposal_details=None,
-                              scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter)
+        visualize_single_image_output(img, metadata, instances=output, proposals=None, image_id=str(image_id),
+                                      extra_proposal_details=None,
+                                      scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter)
 
 
-def run_evaluation(images, cfg, outputs_d, image_ids, model=None, exporter=None):
-    outputs = outputs_d.pop('outputs')
-    proposalss = outputs_d.pop('proposalss')
-    extra_proposal_detailss = outputs_d.pop('extra_proposal_details', None)
+def run_batch_results_visualization(images, cfg, outputs_d, image_ids, model=None, exporter=None,
+                                    visualize_just_image=False):
+    outputs = outputs_d['outputs']
+    proposalss = outputs_d['proposalss']
+    extra_proposal_detailss = outputs_d['extra_proposal_details'] if 'extra_proposal_details' in outputs_d else None
 
     if type(extra_proposal_detailss) is dict:
         extra_proposal_detailss = dictoflists_to_listofdicts(extra_proposal_detailss)
 
     for img, output, proposals, extra_proposal_details, image_id in \
             zip(images, outputs, proposalss, extra_proposal_detailss, image_ids):
-        img, proposals = prep_for_visualization(cfg, img, output, proposals)
+
+        img, pred_instances, proposals = prep_for_visualization(cfg, img, output['instances'], proposals)
+        output['instances'] = pred_instances
         # d. Visualize and export Mask R-CNN predictions
         metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
         proposal_score_thresh = None if model is None else model.roi_heads.test_score_thresh
-        visualize_output_dict(img, metadata, instances=output, proposals=proposals, image_id=str(image_id),
-                              extra_proposal_details=extra_proposal_details,
-                              scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter)
+        visualize_single_image_output(img, metadata, instances=output, proposals=proposals, image_id=str(image_id),
+                                      extra_proposal_details=extra_proposal_details,
+                                      scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter,
+                                      visualize_just_image=visualize_just_image)
 
 
-def prep_for_visualization(cfg, img, output, proposals):
+def prep_for_visualization(cfg, img, pred_instances=None, proposals=None):
     if img.shape[2] == 3:
         output_size = img.shape[:2]
     else:
         output_size = img.shape[1:]
-    if proposals.image_size != output_size:
-        proposals = detector_postprocess(proposals, output_size[0], output_size[1])
-    if output['instances'].image_size != output_size:
-        # for some reason, it wants an extra dimension...
-        B, H, W = output['instances'].pred_masks.shape
-        output['instances'].pred_masks = output['instances'].pred_masks.resize(B, 1, H, W)
-        output['instances'] = detector_postprocess(output['instances'], output_size[0], output_size[1])
+    if proposals is not None:
+        if proposals.image_size != output_size:
+            proposals = detector_postprocess(proposals, output_size[0], output_size[1])
+    if pred_instances is not None:
+        if pred_instances.image_size != output_size:
+            # for some reason, it wants an extra dimension...
+            if len(pred_instances.pred_masks.shape) == 3:
+                B, H, W = pred_instances.pred_masks.shape
+                pred_instances.pred_masks = pred_instances.pred_masks.resize(B, 1, H, W)
+            else:
+                assert len(pred_instances.pred_masks.shape) == 4
+            pred_instances = detector_postprocess(pred_instances, output_size[0], output_size[1])
     img = input_img_to_rgb(img, cfg)
-    return img, proposals
+    return img, pred_instances, proposals
 
 
 def find_datapoint(dataloader, image_id):

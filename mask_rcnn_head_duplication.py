@@ -21,7 +21,7 @@ import torch.distributed
 from detectron2.modeling.roi_heads.multi_instance_roi_heads import MultiROIHeadsAPD, MASK_HEAD_TYPES
 from detectron2.evaluation.evaluator import inference_context
 from script_utils import FigExporter, get_maskrcnn_cfg, get_custom_maskrcnn_cfg, DETECTRON_REPO, \
-    run_evaluation, get_datapoint_file, convert_datapoint_to_image_format
+    run_batch_results_visualization, get_datapoint_file, convert_datapoint_to_image_format
 from vis_utils import collate_figures
 from trainer_apd import Trainer_APD, Predictor_APD
 
@@ -86,9 +86,9 @@ def main(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/ma
 
                 n_existing_exporter_images = len(exporter.generated_figures)
                 outputs_d = run_inference(predictor, datapoint)
-                run_evaluation(input_images, cfg, outputs_d,
-                               image_ids=[str(d['image_id']) + cfg_tag for d in datapoint],
-                               model=predictor.model, exporter=exporter)
+                run_batch_results_visualization(input_images, cfg, outputs_d,
+                                                image_ids=[str(d['image_id']) + cfg_tag for d in datapoint],
+                                                model=predictor.model, exporter=exporter)
                 my_image_ids = [str(d['image_id']) + cfg_tag for d in datapoint]
                 for my_image_id in my_image_ids:
                     figure_name = os.path.splitext(os.path.basename(__file__))[0] + '_' + my_image_id + '_collated'
