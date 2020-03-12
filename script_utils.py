@@ -5,6 +5,9 @@ from PIL import Image
 
 import pickle
 import copy
+from torch import nn
+
+import vis_utils
 from detectron2.config import get_cfg
 import subprocess
 import os
@@ -14,9 +17,9 @@ from detectron2.engine import DefaultTrainer
 from detectron2.evaluation.evaluator import inference_context
 from detectron2.data import MetadataCatalog
 from detectron2.modeling import detector_postprocess
-import matplotlib.pyplot as plt
 
 from vis_utils import visualize_single_image_output, input_img_to_rgb
+import fvcore.nn.weight_init as weight_init
 
 DETECTRON_MODEL_ZOO = os.path.expanduser('~/data/models/detectron_model_zoo')
 assert os.path.isdir(DETECTRON_MODEL_ZOO)
@@ -52,12 +55,103 @@ def make_multihead_state_from_single_head_state(existing_weights_filename,
         raise Exception(f"{src_parent_name} not found in {existing_weights_filename}")
     if remove_src_keys:
         for src_key in src_keys_copied:
-            existing_state['model'].pop(src_key)
+            existing_state['model'].pop(src_key)  # okay if src_key in dst_parent_names: will be updated next.
     existing_state['model'].update(extra_state)
     if existing_weights_filename.endswith(".pkl"):
         pickle.dump(existing_state, open(new_weights_filename, 'wb'))
     else:
         torch.save(existing_state, new_weights_filename)
+
+
+def initialize_to_random(mask_head):
+    for layer in mask_head.conv_norm_relus + [mask_head.deconv]:
+        weight_init.c2_msra_fill(layer)
+    # use normal distribution initialization for mask prediction layer
+    nn.init.normal_(mask_head.predictor.weight, std=0.001)
+    if mask_head.predictor.bias is not None:
+        nn.init.constant_(mask_head.predictor.bias, 0)
+
+
+def copy_singlemask_multihead_to_multimask_multihead(existing_weights_filename,
+                                                     new_weights_filename, n_masks_per_roi=2,
+                                                     src_parent_name='roi_heads.custom_mask_head.predictor',
+                                                     dst_parent_name='roi_heads.custom_mask_head.predictor',
+                                                     remove_src_keys=True):
+    """
+    Standard Mask R-CNN predicts one mask per ROI.  This creates a state dict that has random weights for any
+    additional masks produced per ROI.  Note the copied and random weights are 'interleaved' because we masks of the
+    same class are adjacent in channels (dog1, dog2, cat1, cat2): NOT (dog1, cat1, dog2, cat2)
+    """
+
+    if existing_weights_filename.endswith(".pkl"):
+        with open(existing_weights_filename, "rb") as f:
+            existing_state = pickle.load(f, encoding="latin1")
+    else:
+        existing_state = torch.load(existing_weights_filename)
+    extra_state = {}
+    src_keys_copied = []
+    src_found = False
+    for src_key in existing_state['model']:
+        if src_key.startswith(src_parent_name):
+            src_found = True
+            src_keys_copied.append(src_key)
+            n_classes = existing_state['model'][src_key].shape[0]  # C, 256, 1, 1
+            dst_key = src_key.replace(src_parent_name, dst_parent_name)
+            if src_key.endswith('weight'):
+                extra_state[dst_key] = repeat_interleave(existing_state['model'][src_key], n_masks_per_roi, dim=0)
+                for roi_m in range(n_masks_per_roi):
+                    if roi_m == 0:
+                        assert np.array_equal(extra_state[dst_key][roi_m::n_masks_per_roi, :, :, :],
+                                              existing_state['model'][src_key])
+                    else:
+                        # use normal distribution initialization for mask prediction layer
+                        tensor_vsn = torch.Tensor(extra_state[dst_key][roi_m::n_masks_per_roi, :, :, :])
+                        nn.init.normal_(tensor_vsn, std=0.001)
+                        extra_state[dst_key][roi_m::n_masks_per_roi, :, :, :] = \
+                            tensor_vsn.numpy().astype(dtype=extra_state[dst_key].dtype)
+            elif src_key.endswith('bias'):
+                if existing_state['model'][src_key] is None:
+                    extra_state[dst_key] = None
+                else:
+                    extra_state[dst_key] = repeat_interleave(existing_state['model'][src_key], n_masks_per_roi, dim=0)
+                    copy.deepcopy(existing_state['model'][src_key])
+                    for roi_m in range(n_masks_per_roi):
+                        if roi_m == 0:
+                            assert np.array_equal(extra_state[dst_key][roi_m::n_masks_per_roi],
+                                                  existing_state['model'][src_key])
+                        else:
+                            # nn.init.constant_(extra_state[dst_key][roi_m::n_masks_per_roi], 0)
+                            extra_state[dst_key][roi_m::n_masks_per_roi] = 0
+            else:
+                raise NotImplementedError('Dont know how to copy {}'.format(src_key))
+    if not src_found:
+        raise Exception(f"{src_parent_name} not found in {existing_weights_filename}")
+    if remove_src_keys:
+        for src_key in src_keys_copied:
+            if src_key in existing_state['model']:
+                existing_state['model'].pop(src_key)
+    existing_state['model'].update(extra_state)
+
+    if not np.array_equal(existing_state['model']['roi_heads.standard_mask_head.predictor.weight'],
+                          existing_state['model']['roi_heads.custom_mask_head.predictor.weight'][::n_masks_per_roi,
+                          ...]):
+        raise Exception
+    if not np.array_equal(existing_state['model']['roi_heads.standard_mask_head.predictor.bias'],
+                          existing_state['model']['roi_heads.custom_mask_head.predictor.bias'][
+                          ::n_masks_per_roi, ...]):
+        raise Exception
+
+    if existing_weights_filename.endswith(".pkl"):
+        pickle.dump(existing_state, open(new_weights_filename, 'wb'))
+    else:
+        torch.save(existing_state, new_weights_filename)
+
+
+def repeat_interleave(arr, n_repeats, dim=0):
+    if torch.is_tensor(arr):
+        return arr.repeat_interleave(n_repeats, dim=dim)
+    else:
+        return np.repeat(arr, n_repeats, axis=dim)
 
 
 def download_detectron_model_to_local_zoo(relpath):
@@ -84,17 +178,32 @@ def get_custom_maskrcnn_cfg(
     cfg = get_maskrcnn_cfg(config_filepath)
     standard_state_file = cfg.MODEL.WEIGHTS
     ext = os.path.splitext(standard_state_file)[1]
-    multiinst_state_file = standard_state_file.replace(f'{ext}', f'_multiinst_heads_apd{ext}')
-    make_multihead_state_from_single_head_state(standard_state_file, multiinst_state_file)
-    cfg.MODEL.WEIGHTS = multiinst_state_file
+    # Adjust state dict for multiple heads
+    if cfg.MODEL.ROI_HEADS.NAME == "MultiROIHeadsAPD":
+        multihead_state_file = standard_state_file.replace(f'{ext}', f'_multiheads_apd{ext}')
+        if not os.path.exists(multihead_state_file):
+            make_multihead_state_from_single_head_state(standard_state_file, multihead_state_file)
+        custom_state_file = multihead_state_file
+    else:
+        custom_state_file = standard_state_file
+
+    # Adjust state dict for multiple masks
+    if cfg.MODEL.ROI_MASK_HEAD.N_MASKS_PER_ROI != 1:
+        multimask_state_file = custom_state_file.replace(f'{ext}', f'_multiheads_apd{ext}')
+        if not os.path.exists(multimask_state_file):
+            copy_singlemask_multihead_to_multimask_multihead(custom_state_file, multimask_state_file)
+        custom_state_file = multimask_state_file
+    cfg.MODEL.WEIGHTS = custom_state_file
     return cfg
 
 
-def get_maskrcnn_cfg(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"):
+def get_maskrcnn_cfg(
+        config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"):
     cfg = get_cfg()
     cfg.merge_from_file(config_filepath)
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
-    # Find a model from detectron2's model zoo. You can either use the https://dl.fbaipublicfiles.... url, or use the
+    # Find a model from detectron2's model zoo. You can either use the https://dl.fbaipublicfiles.... url,
+    # or use the
     # following shorthand
     model_rel_path = 'COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl'
     local_path = download_detectron_model_to_local_zoo(model_rel_path)
@@ -192,7 +301,8 @@ def proposal_predictor_forward_pass(predictor, batched_inputs):
 
 
 def get_image_identifiers(data_loader, identifier_strings=('file_name', 'image_id'), n_images_stop=None):
-    assert data_loader.batch_sampler.batch_size == 1, NotImplementedError('Only handing case of batch size = 1 for now')
+    assert data_loader.batch_sampler.batch_size == 1, NotImplementedError(
+        'Only handing case of batch size = 1 for now')
     assert isinstance(data_loader.sampler, torch.utils.data.sampler.SequentialSampler), \
         'The data loader is not sequential, so the ordering will not be consistent if I give you the filenames.  ' \
         'Choose a data loader with a sequential sampler.'
@@ -213,38 +323,6 @@ def get_image_identifiers(data_loader, identifier_strings=('file_name', 'image_i
         )
 
     return all_identifiers
-
-
-class FigExporter(object):
-    fig_number = 1
-
-    def __init__(self):
-        self.workspace_dir = '/home/adelgior/workspace/images'
-        self.generated_figures = []
-        self.ext = '.png'
-        self.num_fmt = '{:06d}'
-
-    @property
-    def curr_fig_number_as_str(self):
-        return self.num_fmt.format(self.fig_number)
-
-    def export_gcf(self, tag=None, use_number=True):
-
-        if tag is None:
-            assert use_number
-            basename = self.curr_fig_number_as_str + self.ext
-        else:
-            if use_number:
-                basename = self.curr_fig_number_as_str + '_' + tag + self.ext
-            else:
-                basename = tag + self.ext
-
-        fname = os.path.join(self.workspace_dir, basename)
-
-        FigExporter.fig_number += 1
-        plt.savefig(fname)
-        dbprint('Exported {}'.format(fname))
-        self.generated_figures.append(fname)
 
 
 def dictoflists_to_listofdicts(dictoflists):
@@ -288,16 +366,21 @@ def run_batch_results_visualization(images, cfg, outputs_d, image_ids, model=Non
 
     for img, output, proposals, extra_proposal_details, image_id in \
             zip(images, outputs, proposalss, extra_proposal_detailss, image_ids):
+        run_single_image_results_visualization(cfg, exporter, extra_proposal_details, image_id, img, model, output,
+                                               proposals, visualize_just_image)
 
-        img, pred_instances, proposals = prep_for_visualization(cfg, img, output['instances'], proposals)
-        output['instances'] = pred_instances
-        # d. Visualize and export Mask R-CNN predictions
-        metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
-        proposal_score_thresh = None if model is None else model.roi_heads.test_score_thresh
-        visualize_single_image_output(img, metadata, instances=output, proposals=proposals, image_id=str(image_id),
-                                      extra_proposal_details=extra_proposal_details,
-                                      scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter,
-                                      visualize_just_image=visualize_just_image)
+
+def run_single_image_results_visualization(cfg, exporter, extra_proposal_details, image_id, img, model, output,
+                                           proposals, visualize_just_image):
+    img, pred_instances, proposals = prep_for_visualization(cfg, img, output['instances'], proposals)
+    output['instances'] = pred_instances
+    # d. Visualize and export Mask R-CNN predictions
+    metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
+    proposal_score_thresh = None if model is None else model.roi_heads.test_score_thresh
+    visualize_single_image_output(img, metadata, instances=output, proposals=proposals, image_id=str(image_id),
+                                  extra_proposal_details=extra_proposal_details,
+                                  scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter,
+                                  visualize_just_image=visualize_just_image)
 
 
 def prep_for_visualization(cfg, img, pred_instances=None, proposals=None):
@@ -352,7 +435,8 @@ def get_datapoint_file(cfg, image_id):
 
 def build_dataloader(cfg):
     dataloaders_eval = {
-        'val': DefaultTrainer.build_test_loader(cfg, {'train': cfg.DATASETS.TRAIN[0], 'val': cfg.DATASETS.TEST[0]}[s])
+        'val': DefaultTrainer.build_test_loader(cfg,
+                                                {'train': cfg.DATASETS.TRAIN[0], 'val': cfg.DATASETS.TEST[0]}[s])
         for s
         in ('train', 'val')
     }
@@ -373,3 +457,55 @@ def convert_datapoint_to_image_format(img, out_shape, cfg):
         img = np.asarray(Image.fromarray(img, mode=cfg.INPUT.FORMAT).convert("RGB"))
     img = cv2.resize(img, out_shape[::-1])
     return img
+
+
+class Timer(object):
+    def __init__(self, name=None):
+        self.name = name
+
+    def __enter__(self):
+        self.tstart = time.time()
+
+    def __exit__(self, type, value, traceback):
+        if self.name:
+            print('[%s]' % self.name,)
+        print('Elapsed: %s' % (time.time() - self.tstart))
+
+
+def prep_image(datapoint, cfg):
+    image_filename = datapoint['file_name']
+    input_image = datapoint['image']
+    input_image = np.asarray(input_image.permute(1, 2, 0)[:, :, [2, 1, 0]])
+    input_image_from_file = cv2.imread(image_filename)
+    input_image = convert_datapoint_to_image_format(input_image, input_image_from_file.shape[:2], cfg)
+    return input_image
+
+
+def run_inference(trainer, inputs):
+    previously_training = trainer.model.training
+    trainer.model.eval()
+    with inference_context(trainer.model), torch.no_grad():
+        # Get proposals
+        images = trainer.model.preprocess_image(inputs)
+        features = trainer.model.backbone(images.tensor)
+        proposalss, proposal_lossess = trainer.model.proposal_generator(images, features, None)
+
+        # Get instance boxes, masks, and proposal idxs
+        outputs, extra_proposal_details = trainer.model(inputs, trace_proposals=True)
+
+    if previously_training:
+        trainer.model.train()
+
+    return {'outputs': outputs,
+            'proposalss': proposalss,
+            'proposal_lossess': proposal_lossess,
+            'extra_proposal_details': extra_proposal_details
+            }
+
+
+def visualize_instancewise_predictions(img, instance_outputs, cfg, exporter, tag):
+    n_instances = len(instance_outputs)
+    for i in range(n_instances):
+        instance = instance_outputs[[i]]
+        vis_utils.show_prediction(img, {'instances': instance}, metadata=MetadataCatalog.get(cfg.DATASETS.TRAIN[0]))
+        exporter.export_gcf(tag + f'_inst{i}')

@@ -18,11 +18,11 @@ import os
 import torch
 import torch.distributed
 
-from detectron2.modeling.roi_heads.multi_instance_roi_heads import MultiROIHeadsAPD, MASK_HEAD_TYPES
+from detectron2.modeling.roi_heads.multi_roi_heads_apd import MultiROIHeadsAPD, MASK_HEAD_TYPES
 from detectron2.evaluation.evaluator import inference_context
-from script_utils import FigExporter, get_maskrcnn_cfg, get_custom_maskrcnn_cfg, DETECTRON_REPO, \
+from script_utils import get_maskrcnn_cfg, get_custom_maskrcnn_cfg, DETECTRON_REPO, \
     run_batch_results_visualization, get_datapoint_file, convert_datapoint_to_image_format
-from vis_utils import collate_figures
+from vis_utils import collate_figures, FigExporter
 from trainer_apd import Trainer_APD, Predictor_APD
 
 exporter_ = None
@@ -30,7 +30,7 @@ exporter_ = None
 
 def dbprint(*args, **kwargs):
     print(*args, **kwargs)
-
+c
 
 def equal_ids(id1, id2):
     return str(id1).rstrip('0') == str(id2).rstrip('0')

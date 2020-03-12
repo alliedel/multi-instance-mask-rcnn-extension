@@ -97,13 +97,17 @@ class Predictor_APD(PredictorOrTrainerBase_APD):
         self.model.eval()
 
 
+from script_utils import Timer
+
+
 class Trainer_APD(TrainerBase):
 
     def __init__(self, cfg):
         super().__init__()
 
         self.cfg = cfg.clone()  # cfg can be modified by model
-        self.model = build_model(self.cfg)
+        with Timer('Building model'):
+            self.model = build_model(self.cfg)
         self.metadata = MetadataCatalog.get(cfg.DATASETS.TEST[0])
 
         checkpointer = DetectionCheckpointer(self.model)
@@ -119,7 +123,8 @@ class Trainer_APD(TrainerBase):
         self.model.train()
 
         self.optimizer = self.build_optimizer(cfg, self.model)
-        self.data_loader = self.build_train_loader(cfg)
+        with Timer('Building dataloader'):
+            self.data_loader = self.build_train_loader(cfg)
         self._data_loader_iter = iter(self.data_loader)
 
         # For training, wrap with DDP. But don't need this for inference.

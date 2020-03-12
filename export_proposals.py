@@ -13,9 +13,7 @@ import os
 import matplotlib.pyplot as plt
 import torch
 
-
-from script_utils import FigExporter
-from vis_utils import cv2_imshow
+from vis_utils import cv2_imshow, FigExporter
 from script_utils import get_cfg, download_detectron_model_to_local_zoo, DETECTRON_REPO
 from detectron2.engine import DefaultPredictor
 

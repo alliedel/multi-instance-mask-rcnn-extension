@@ -13,13 +13,13 @@ import os
 import torch
 import torch.distributed
 
-from vis_utils import show_prediction
+from vis_utils import show_prediction, FigExporter
 from detectron2.data import MetadataCatalog
 import vis_utils, script_utils
 from detectron2.evaluation.evaluator import inference_context
 from detectron2.utils.events import EventStorage
-from script_utils import FigExporter, get_custom_maskrcnn_cfg, run_batch_results_visualization, get_datapoint_file, \
-    convert_datapoint_to_image_format
+from script_utils import get_custom_maskrcnn_cfg, run_batch_results_visualization, get_datapoint_file, \
+    convert_datapoint_to_image_format, run_inference
 from trainer_apd import Trainer_APD
 
 exporter_ = None
@@ -31,28 +31,6 @@ def dbprint(*args, **kwargs):
 
 def equal_ids(id1, id2):
     return str(id1).rstrip('0') == str(id2).rstrip('0')
-
-
-def run_inference(trainer, inputs):
-    previously_training = trainer.model.training
-    trainer.model.eval()
-    with inference_context(trainer.model), torch.no_grad():
-        # Get proposals
-        images = trainer.model.preprocess_image(inputs)
-        features = trainer.model.backbone(images.tensor)
-        proposalss, proposal_lossess = trainer.model.proposal_generator(images, features, None)
-
-        # Get instance boxes, masks, and proposal idxs
-        outputs, extra_proposal_details = trainer.model(inputs, trace_proposals=True)
-
-    if previously_training:
-        trainer.model.train()
-
-    return {'outputs': outputs,
-            'proposalss': proposalss,
-            'proposal_lossess': proposal_lossess,
-            'extra_proposal_details': extra_proposal_details
-            }
 
 
 def prep_image(datapoint, cfg):
