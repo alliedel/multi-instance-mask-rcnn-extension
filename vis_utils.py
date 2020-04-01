@@ -2,14 +2,10 @@ import cv2
 import numpy as np
 import os
 from PIL import Image
-
-from detectron2.layers import paste_masks_in_image
-
-from detectron2.structures import Instances
 from matplotlib import pyplot as plt
 
 from detectron2.data import MetadataCatalog
-from detectron2.utils.visualizer import Visualizer, ColorMode
+from detectron2.utils.visualizer import Visualizer
 
 
 def dbprint(*args, **kwargs):

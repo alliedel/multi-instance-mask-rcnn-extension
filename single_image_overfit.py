@@ -1,5 +1,5 @@
 """
-The goal of single_image_overfit_one_proposal is to prove we can overfit to a single selected proposal.  Reasoning:
+The goal of single_image_overfit is to prove we can overfit to a single image.  Reasoning:
 - With the customized head, we need to specialize the loss with respect to each proposal
 - With the customized head, we may be using only a subset of the proposals, or a different set entirely (interfacing
 at an earlier level).  By fitting to a single proposal, we're demonstrating that we are able to interface at the
@@ -23,10 +23,10 @@ from vis_utils import visualize_groundtruth, FigExporter
 exporter_ = None
 
 
-def train_on_single_image(trainer: Trainer_APD, datapoint, max_iters=100):
+def train_on_single_image(trainer: Trainer_APD, batch, max_iters=100):
     for t in range(max_iters):
         with EventStorage(0) as trainer.storage:
-            trainer.run_step_with_given_data(datapoint)
+            trainer.run_step_with_given_data(batch)
 
 
 def visualize_single_instance_predictions(img, instance_outputs, cfg, exporter, tag):

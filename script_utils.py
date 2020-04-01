@@ -1,25 +1,27 @@
-import cv2
-import gc
-import numpy as np
-from PIL import Image
-
 import pickle
+import subprocess
+
 import copy
+import cv2
+import fvcore.nn.weight_init as weight_init
+import gc
+import logging
+import numpy as np
+import os
+import time
+import torch
+import torch.distributed
+from PIL import Image
 from torch import nn
 
 import vis_utils
 from detectron2.config import get_cfg
-import subprocess
-import os
-import torch, torch.distributed, logging, time
-
+from detectron2.data import MetadataCatalog
 from detectron2.engine import DefaultTrainer
 from detectron2.evaluation.evaluator import inference_context
-from detectron2.data import MetadataCatalog
 from detectron2.modeling import detector_postprocess
-
+from detectron2.modeling.roi_heads import CustomMaskRCNNConvUpsampleHeadAPD
 from vis_utils import visualize_single_image_output, input_img_to_rgb
-import fvcore.nn.weight_init as weight_init
 
 DETECTRON_MODEL_ZOO = os.path.expanduser('~/data/models/detectron_model_zoo')
 assert os.path.isdir(DETECTRON_MODEL_ZOO)
@@ -468,7 +470,7 @@ class Timer(object):
 
     def __exit__(self, type, value, traceback):
         if self.name:
-            print('[%s]' % self.name,)
+            print('[%s]' % self.name, )
         print('Elapsed: %s' % (time.time() - self.tstart))
 
 
@@ -509,3 +511,14 @@ def visualize_instancewise_predictions(img, instance_outputs, cfg, exporter, tag
         instance = instance_outputs[[i]]
         vis_utils.show_prediction(img, {'instances': instance}, metadata=MetadataCatalog.get(cfg.DATASETS.TRAIN[0]))
         exporter.export_gcf(tag + f'_inst{i}')
+
+
+def activate_head_type(trainer, head_type):
+    trainer.model.roi_heads.active_mask_head = head_type
+    if head_type is 'custom':
+        assert type(trainer.model.roi_heads.mask_heads[trainer.model.roi_heads.active_mask_head]) is \
+               CustomMaskRCNNConvUpsampleHeadAPD, 'Not using custom head; head type is {}'.format(type(
+            trainer.model.roi_heads.mask_heads[trainer.model.roi_heads.active_mask_head]))
+    else:
+        assert type(trainer.model.roi_heads.mask_heads[trainer.model.roi_heads.active_mask_head]) \
+               is not CustomMaskRCNNConvUpsampleHeadAPD
