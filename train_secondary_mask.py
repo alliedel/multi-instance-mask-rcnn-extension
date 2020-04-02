@@ -29,6 +29,8 @@ def train_on_single_image(trainer: Trainer_APD, datapoint, max_itr=100, start_it
     assert max_itr >= start_itr
     with EventStorage(0) as trainer.storage:
         for t in range(max_itr - start_itr):
+            if t % 10 == 0:
+                print(t, '/', max_itr)
             trainer.run_step_with_given_data(datapoint)
 
 
