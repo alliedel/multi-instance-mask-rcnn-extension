@@ -1,6 +1,9 @@
 """
 The goals of train_secondary_mask are to demonstrate that we can (a) assign more than one instance of a given semantic
 class per box (new feature) and (b) train the loss using that new instance.
+
+It's up in the air whether it's better to start with the 'primary' (pretrained) or 'secondary' weights for now.  At
+the moment, I'm trying the primary weights because the visualization is set up to ignore the secondary weights.
 """
 
 import os
