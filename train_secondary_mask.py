@@ -62,11 +62,14 @@ def main(image_id='486536', maxitr=100):
 
     pretraining(batch, cfg, cfg_tag, exporter, image_id, trainer)
 
-    train_on_single_image(trainer, batch, max_itr=maxitr)
-
-    # visualize
     input_image = prep_image(batch[0], cfg)
-    posttraining(cfg, cfg_tag, batch[0], exporter, image_id, input_image, maxitr, trainer)
+    step = 10
+    strt = 0
+    for strtitr in range(0, maxitr, step):
+        itr = strtitr + step
+        train_on_single_image(trainer, batch, max_itr=strtitr + itr, start_itr=strtitr)
+        # visualize
+        posttraining(cfg, cfg_tag, batch[0], exporter, image_id, input_image, itr, trainer)
 
 
 def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, trainer):
