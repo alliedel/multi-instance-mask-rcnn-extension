@@ -5,7 +5,7 @@ from detectron2.data import MetadataCatalog
 from detectron2.utils.visualizer import Visualizer
 
 
-from script_utils import get_maskrcnn_cfg
+import script_utils
 from vis_utils import cv2_imshow, FigExporter
 
 with open('output/mask_rcnn_R_50_FPN_3x/filelist_train.txt', 'r') as f:
@@ -32,7 +32,7 @@ predictions = torch.load(prediction_file)
 proposals = torch.load(proposals_file)
 img = cv2.imread(image_filenames[index])
 
-cfg = get_maskrcnn_cfg()
+cfg = script_utils.get_maskrcnn_cfg()
 metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
 scale = 2.0
 v = Visualizer(img[:, :, ::-1], metadata=metadata, scale=scale)

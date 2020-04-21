@@ -8,7 +8,6 @@ Subgoals:
 - (DONE) Make sure our trainer class can run inference correctly
 """
 
-
 import cv2
 import numpy as np
 import os
@@ -18,19 +17,18 @@ import os
 import torch
 import torch.distributed
 
-from detectron2.modeling.roi_heads.multi_roi_heads_apd import MultiROIHeadsAPD, MASK_HEAD_TYPES
+from detectron2.modeling.roi_heads.multi_roi_heads_apd import MultiROIHeadsAPD
 from detectron2.evaluation.evaluator import inference_context
-from script_utils import get_maskrcnn_cfg, get_custom_maskrcnn_cfg, DETECTRON_REPO, \
-    run_batch_results_visualization, get_datapoint_file, convert_datapoint_to_image_format
+import script_utils
 from vis_utils import collate_figures, FigExporter
-from trainer_apd import Trainer_APD, Predictor_APD
+from trainer_apd import Trainer_APD
 
 exporter_ = None
 
 
 def dbprint(*args, **kwargs):
     print(*args, **kwargs)
-c
+
 
 def equal_ids(id1, id2):
     return str(id1).rstrip('0') == str(id2).rstrip('0')
@@ -54,18 +52,18 @@ def run_inference(predictor, inputs):
                 }
 
 
-def main(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
+def main(config_filepath=f"{script_utils.DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
          image_ids=('486536',), flip_lr=False, exporter=exporter_):
     if type(image_ids) is str:
         image_ids = [image_ids]
-    cfg = get_custom_maskrcnn_cfg()
+    cfg = script_utils.get_custom_maskrcnn_cfg()
     predictor = Trainer_APD(cfg)
     assert isinstance(predictor.model.roi_heads, MultiROIHeadsAPD)
 
     rls = [False, True] if flip_lr is True else [False]
     for rl in rls:
         for image_id in image_ids:
-            saved_input_file = get_datapoint_file(cfg, image_id)
+            saved_input_file = script_utils.get_datapoint_file(cfg, image_id)
             datapoint = torch.load(saved_input_file)
             if type(datapoint) is not list:
                 datapoint = [datapoint]
@@ -77,7 +75,7 @@ def main(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/ma
             input_images = [d['image'] for d in datapoint]
             input_images = [np.asarray(img.permute(1, 2, 0)[:, :, [2, 1, 0]]) for img in input_images]
             input_images_from_files = [cv2.imread(fn) for fn in image_filenames]
-            input_images = [convert_datapoint_to_image_format(im, im2.shape[:2], cfg)
+            input_images = [script_utils.convert_datapoint_to_image_format(im, im2.shape[:2], cfg)
                             for im, im2 in zip(input_images, input_images_from_files)]
 
             for predictor_type in predictor.model.roi_heads.mask_heads.keys():
@@ -86,9 +84,10 @@ def main(config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/ma
 
                 n_existing_exporter_images = len(exporter.generated_figures)
                 outputs_d = run_inference(predictor, datapoint)
-                run_batch_results_visualization(input_images, cfg, outputs_d,
-                                                image_ids=[str(d['image_id']) + cfg_tag for d in datapoint],
-                                                model=predictor.model, exporter=exporter)
+                script_utils.run_batch_results_visualization(input_images, cfg, outputs_d,
+                                                             image_ids=[str(d['image_id']) + cfg_tag for d in
+                                                                        datapoint],
+                                                             model=predictor.model, exporter=exporter)
                 my_image_ids = [str(d['image_id']) + cfg_tag for d in datapoint]
                 for my_image_id in my_image_ids:
                     figure_name = os.path.splitext(os.path.basename(__file__))[0] + '_' + my_image_id + '_collated'
