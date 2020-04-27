@@ -13,12 +13,14 @@ import torch
 import torch.distributed
 import torch.distributed
 
-import script_utils
-import vis_utils
-from detectron2.data import MetadataCatalog
+from maskrcnnextension.train import script_utils
+from maskrcnnextension.analysis import vis_utils
 from detectron2.utils.events import EventStorage
-from script_utils import run_inference, visualize_instancewise_predictions, prep_image
-from trainer_apd import Trainer_APD
+from maskrcnnextension.train.script_utils import run_inference, visualize_instancewise_predictions, prep_image
+from maskrcnnextension.train.trainer_apd import Trainer_APD
+
+
+VISUALIZE = 0
 
 exporter_ = None
 
@@ -47,7 +49,15 @@ def stochastic_train_on_set(trainer: Trainer_APD, batches, max_itr=100, start_it
             trainer.run_step_with_given_data(batches[int(t % N)])
 
 
-def main(image_ids=('306284', '486536', '9'), maxitr=1000, step=500):
+def stochastic_train_on_set2(trainer: Trainer_APD, batches, max_itr=100, start_itr=0):
+    stochastic_train_on_set(trainer, batches, max_itr, start_itr)
+
+
+def stochastic_train_on_set1(trainer: Trainer_APD, batches, max_itr=100, start_itr=0):
+    stochastic_train_on_set(trainer, batches, max_itr, start_itr)
+
+
+def main_custom(image_ids=('306284', '486536', '9'), maxitr=100, step=50):
     exporter = vis_utils.FigExporter()
 
     print('Beginning setup...')
@@ -65,10 +75,88 @@ def main(image_ids=('306284', '486536', '9'), maxitr=1000, step=500):
     script_utils.activate_head_type(trainer, head_type)
     cfg_tag = f"_{head_type}"
 
-    for image_id, batch in zip(image_ids, batches):
-        for masks_key in ['pred_masks1', 'pred_masks2']:
-            pretraining(batch, cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), exporter, image_id, trainer,
-                        masks_key=masks_key)
+    if VISUALIZE:
+        for image_id, batch in zip(image_ids, batches):
+            for masks_key in ['pred_masks1', 'pred_masks2']:
+                pretraining(batch, cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), exporter, image_id, trainer,
+                            masks_key=masks_key)
+
+    input_images = [prep_image(batch[0], cfg) for batch in batches]
+    strt = 0
+    for strtitr in range(0, maxitr, step):
+        itr = strtitr + step
+        stochastic_train_on_set1(trainer, batches, max_itr=strtitr + itr, start_itr=strtitr)
+        # visualize
+
+        if VISUALIZE:
+            for masks_key in ['pred_masks1', 'pred_masks2']:
+                for image_id, input_image, batch in zip(image_ids, input_images, batches):
+                    posttraining(cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), batch[0], exporter, image_id,
+                                 input_image, itr, trainer, masks_key=masks_key, show_pipeline=False)
+
+
+def main_standard(image_ids=('306284', '486536', '9'), maxitr=100, step=50):
+    exporter = vis_utils.FigExporter()
+
+    print('Beginning setup...')
+    cfg = script_utils.get_custom_maskrcnn_cfg()
+    trainer = Trainer_APD(cfg)
+
+    print('Completing setup...')
+    batches = []
+    for image_id in image_ids:
+        datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
+        batches.append([datapoint] if type(datapoint) is not list else datapoint)
+
+    # head_type = 'custom' if custom_head else 'standard'
+    head_type = 'standard'
+    script_utils.activate_head_type(trainer, head_type)
+
+    cfg_tag = f"_{head_type}"
+
+    if VISUALIZE:
+        for image_id, batch in zip(image_ids, batches):
+            for masks_key in ['pred_masks']:
+                pretraining(batch, cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), exporter, image_id, trainer,
+                            masks_key=masks_key)
+
+    input_images = [prep_image(batch[0], cfg) for batch in batches]
+    strt = 0
+    for strtitr in range(0, maxitr, step):
+        itr = strtitr + step
+        stochastic_train_on_set2(trainer, batches, max_itr=strtitr + itr, start_itr=strtitr)
+        # visualize
+
+        if VISUALIZE:
+            for masks_key in ['pred_masks']:
+                for image_id, input_image, batch in zip(image_ids, input_images, batches):
+                    posttraining(cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), batch[0], exporter, image_id,
+                                 input_image, itr, trainer, masks_key=masks_key, show_pipeline=False)
+
+
+def main_orig(image_ids=('306284', '486536', '9'), maxitr=1000, step=500):
+    exporter = vis_utils.FigExporter()
+
+    print('Beginning setup...')
+    cfg = script_utils.get_maskrcnn_cfg()
+    trainer = Trainer_APD(cfg)
+
+    print('Completing setup...')
+    batches = []
+    for image_id in image_ids:
+        datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
+        batches.append([datapoint] if type(datapoint) is not list else datapoint)
+
+    # head_type = 'custom' if custom_head else 'standard'
+    head_type = 'standard'
+    script_utils.activate_head_type(trainer, head_type)
+    cfg_tag = f"_{head_type}"
+
+    if VISUALIZE:
+        for image_id, batch in zip(image_ids, batches):
+            for masks_key in ['pred_masks']:
+                pretraining(batch, cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), exporter, image_id, trainer,
+                            masks_key=masks_key)
 
     input_images = [prep_image(batch[0], cfg) for batch in batches]
     strt = 0
@@ -77,10 +165,11 @@ def main(image_ids=('306284', '486536', '9'), maxitr=1000, step=500):
         stochastic_train_on_set(trainer, batches, max_itr=strtitr + itr, start_itr=strtitr)
         # visualize
 
-        for masks_key in ['pred_masks1', 'pred_masks2']:
-            for image_id, input_image, batch in zip(image_ids, input_images, batches):
-                posttraining(cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), batch[0], exporter, image_id,
-                             input_image, itr, trainer, masks_key=masks_key, show_pipeline=False)
+        if VISUALIZE:
+            for masks_key in ['pred_masks']:
+                for image_id, input_image, batch in zip(image_ids, input_images, batches):
+                    posttraining(cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), batch[0], exporter, image_id,
+                                 input_image, itr, trainer, masks_key=masks_key, show_pipeline=False)
 
 
 def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, trainer, masks_key='pred_masks',
@@ -131,6 +220,7 @@ def pretraining(batch, cfg, cfg_tag, exporter, image_id, trainer, masks_key=None
         vis_utils.visualize_instancewise_groundtruth(dpt, cfg, exporter, cfg_tag + '_gt')
         exporter.collate_previous('{:02d}'.format(exporter.fig_number) + 'c_' + image_id + '_gt',
                                   delete_individuals=True)
+
         input_image = prep_image(dpt, cfg)
         img, pred_instances, _ = script_utils.prep_for_visualization(cfg, input_image,
                                                                      pred_instances=outputs['instances'],
@@ -152,6 +242,11 @@ def pretraining(batch, cfg, cfg_tag, exporter, image_id, trainer, masks_key=None
                 0] + '_' + image_id + cfg_tag +
             posttrain_tag + '_pipeline', delete_individuals=True)
     return outputs_d
+
+
+def main(maxitr=1000, step=500):
+    main_standard(maxitr=maxitr, step=step)
+    main_custom(maxitr=maxitr, step=step)
 
 
 if __name__ == '__main__':

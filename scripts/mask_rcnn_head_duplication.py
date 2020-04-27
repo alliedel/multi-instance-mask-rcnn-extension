@@ -19,9 +19,9 @@ import torch.distributed
 
 from detectron2.modeling.roi_heads.multi_roi_heads_apd import MultiROIHeadsAPD
 from detectron2.evaluation.evaluator import inference_context
-import script_utils
-from vis_utils import collate_figures, FigExporter
-from trainer_apd import Trainer_APD
+from maskrcnnextension.train import script_utils
+from maskrcnnextension.analysis.vis_utils import collate_figures, FigExporter
+from maskrcnnextension.train.trainer_apd import Trainer_APD
 
 exporter_ = None
 

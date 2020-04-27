@@ -3,8 +3,8 @@ from PIL import Image
 from detectron2.data import MetadataCatalog, build_detection_train_loader
 from detectron2.utils.visualizer import Visualizer
 
-import script_utils
-from vis_utils import cv2_imshow, FigExporter
+from maskrcnnextension.train import script_utils
+from maskrcnnextension.analysis.vis_utils import cv2_imshow, FigExporter
 
 cfg = script_utils.get_maskrcnn_cfg()
 metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])

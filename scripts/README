@@ -1,0 +1,2 @@
+Most of these scripts were designed to be run in the parent directory, 'maskrcnn'.  Move them outside of the 'scripts'
+directory if you'd like them to work as planned.

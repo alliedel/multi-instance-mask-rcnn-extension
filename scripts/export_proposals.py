@@ -10,11 +10,9 @@
 
 import cv2
 import os
-import matplotlib.pyplot as plt
-import torch
 
-from vis_utils import cv2_imshow, FigExporter
-from script_utils import get_cfg, download_detectron_model_to_local_zoo, DETECTRON_REPO
+from maskrcnnextension.analysis.vis_utils import cv2_imshow, FigExporter
+from maskrcnnextension.train.script_utils import get_cfg, download_detectron_model_to_local_zoo, DETECTRON_REPO
 from detectron2.engine import DefaultPredictor
 
 
@@ -83,7 +81,7 @@ print('Number of validation images: ', len(dataloaders['val']))
 
 # for each image in training set
 
-from script_utils import just_inference_on_dataset, get_image_identifiers
+from maskrcnnextension.train.script_utils import just_inference_on_dataset, get_image_identifiers
 
 outdir = os.path.join('output', os.path.splitext(os.path.basename(config_filepath))[0])
 if not os.path.exists(outdir):

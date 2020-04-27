@@ -13,12 +13,11 @@ import torch
 import torch.distributed
 import torch.distributed
 
-import script_utils
-import vis_utils
-from detectron2.data import MetadataCatalog
+from maskrcnnextension.train import script_utils
+from maskrcnnextension.analysis import vis_utils
 from detectron2.utils.events import EventStorage
-from script_utils import run_inference, visualize_instancewise_predictions, prep_image
-from trainer_apd import Trainer_APD
+from maskrcnnextension.train.script_utils import run_inference, visualize_instancewise_predictions, prep_image
+from maskrcnnextension.train.trainer_apd import Trainer_APD
 
 exporter_ = None
 
@@ -36,7 +35,18 @@ def train_on_single_image(trainer: Trainer_APD, datapoint, max_itr=100, start_it
             trainer.run_step_with_given_data(datapoint)
 
 
-def main(image_id='486536', maxitr=500):
+def stochastic_train_on_set(trainer: Trainer_APD, batches, max_itr=100, start_itr=0):
+    N = len(batches)
+    assert max_itr >= start_itr
+    with EventStorage(0) as trainer.storage:
+        for t in range(start_itr, max_itr):
+            if (t - start_itr) % 10 == 0:
+                print(t, '/', max_itr)
+            print('Image {}'.format(t % N))
+            trainer.run_step_with_given_data(batches[int(t % N)])
+
+
+def main(image_ids=('306284', '486536', '9'), maxitr=10000, step=500):
     exporter = vis_utils.FigExporter()
 
     print('Beginning setup...')
@@ -44,38 +54,32 @@ def main(image_id='486536', maxitr=500):
     trainer = Trainer_APD(cfg)
 
     print('Completing setup...')
-    standard_head = trainer.model.roi_heads.mask_heads['standard']
-    custom_head = trainer.model.roi_heads.mask_heads['custom']
-
-    datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
-
-    if type(datapoint) is list:
-        datapoint = datapoint[0]
-    batch = [datapoint]
+    batches = []
+    for image_id in image_ids:
+        datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
+        batches.append([datapoint] if type(datapoint) is not list else datapoint)
 
     # head_type = 'custom' if custom_head else 'standard'
     head_type = 'custom'
     script_utils.activate_head_type(trainer, head_type)
     cfg_tag = f"_{head_type}"
 
-    metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
-    names = metadata.get("thing_classes", None)
-    labels = [names[i] for i in datapoint['instances'].gt_classes]
+    for image_id, batch in zip(image_ids, batches):
+        for masks_key in ['pred_masks1', 'pred_masks2']:
+            pretraining(batch, cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), exporter, image_id, trainer,
+                        masks_key=masks_key)
 
-    for masks_key in ['pred_masks1', 'pred_masks2']:
-        pretraining(batch, cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), exporter, image_id, trainer,
-                    masks_key=masks_key)
-
-    input_image = prep_image(batch[0], cfg)
-    step = 50
+    input_images = [prep_image(batch[0], cfg) for batch in batches]
     strt = 0
     for strtitr in range(0, maxitr, step):
         itr = strtitr + step
-        train_on_single_image(trainer, batch, max_itr=strtitr + itr, start_itr=strtitr)
+        stochastic_train_on_set(trainer, batches, max_itr=strtitr + itr, start_itr=strtitr)
         # visualize
+
         for masks_key in ['pred_masks1', 'pred_masks2']:
-            posttraining(cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), batch[0], exporter, image_id,
-                         input_image, itr, trainer, masks_key=masks_key)
+            for image_id, input_image, batch in zip(image_ids, input_images, batches):
+                posttraining(cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), batch[0], exporter, image_id,
+                             input_image, itr, trainer, masks_key=masks_key, show_pipeline=False)
 
 
 def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, trainer, masks_key='pred_masks',
@@ -150,4 +154,4 @@ def pretraining(batch, cfg, cfg_tag, exporter, image_id, trainer, masks_key=None
 
 
 if __name__ == '__main__':
-    main()
+    main(maxitr=10000, step=500)

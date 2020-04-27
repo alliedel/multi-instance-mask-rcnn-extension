@@ -4,19 +4,15 @@
 ## Then, we will analyze the combination of GT and prediction boxes to see how many predictions include
 # co-occurrence with another object.
 
-import cv2
-import os
 ## Later objectives:
 # Use this on the Kitchen dataset
 # Change the training loss to re-learn the instance generation.
-import time
-import torch
-import torch.distributed
-from detectron2.engine import DefaultPredictor
-from detectron2.evaluation.evaluator import inference_context
 
-from script_utils import get_maskrcnn_cfg, DETECTRON_REPO
-from vis_utils import cv2_imshow, FigExporter
+import cv2
+import os
+from maskrcnnextension.train.script_utils import get_maskrcnn_cfg, DETECTRON_REPO
+from maskrcnnextension.analysis.vis_utils import cv2_imshow, FigExporter
+from detectron2.engine import DefaultPredictor
 
 
 def dbprint(*args, **kwargs):
@@ -33,7 +29,7 @@ exporter.export_gcf('input')
 
 # b. Load Mask R-CNN model
 config_filepath = f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
-cfg = get_maskrcnn_cfg(config_filepath)
+cfg = get_maskrcnn_cfg()
 predictor = DefaultPredictor(cfg)
 
 # c. Get Mask R-CNN predictions and print boxes
@@ -64,30 +60,46 @@ dataloaders = {
 print('Number of training images: ', len(dataloaders['train']))
 print('Number of validation images: ', len(dataloaders['val']))
 
+# # f. Export an example
+# datapoint = None
+# for idx, i in enumerate(train_data_loader):
+#     if idx == 0:
+#         datapoint = i
+#
+# example_img = datapoint['image']
+# data_name = os.path.splitext(os.path.basename(datapoint['file_name']))[0]
+# from detectron2.structures.instances import Instances
+# v = Visualizer(example_img, MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
+# # v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+# cv2_imshow(v.get_image()[:, :, ::-1])
+# exporter.export_gcf('test image')
+
+# g. Run Mask R-CNN predictions on all COCO images
+
+# for each image in training set
+
+from maskrcnnextension.train.script_utils import just_inference_on_dataset, get_image_identifiers
+
 outdir = os.path.join('output', os.path.splitext(os.path.basename(config_filepath))[0])
 if not os.path.exists(outdir):
     os.makedirs(outdir)
-train = True
-# for split, data_loader in dataloaders.items():
-split, data_loader = 'train', dataloaders['train']
-if 1:
+
+for split, data_loader in dataloaders.items():
     n_points = None  # Set to 10 or so for debugging
+    just_inference_on_dataset(predictor.model, data_loader, outdir, n_points)
 
-    num_devices = torch.distributed.get_world_size() if torch.distributed.is_initialized() else 1
-    total = len(data_loader)  # inference data loader must have a fixed length
 
-    logging_interval = 50
-    num_warmup = min(5, logging_interval - 1, total - 1)
-    start_time = time.time()
-    n_points = 4
-    if train is False:
-        with inference_context(predictor.model), torch.no_grad():
-            for idx, inputs in enumerate(data_loader):
-                if idx >= n_points:
-                    break
-                outputs = predictor.model(inputs)
+# Write file list to path
+filelists = {s: os.path.join(outdir, 'filelist_{}.txt'.format(s))
+             for s in ('train', 'val')}
+
+for s in ('val', 'train'):
+    if not os.path.exists(filelists[s]): # generate filelist
+        identifiers = get_image_identifiers(dataloaders[s], identifier_strings=('file_name', 'image_id'))
+        list_of_files = [idnt['file_name'] for idnt in identifiers]
+        with open(filelists[s], 'w') as fid:
+            fid.write('\n'.join(list_of_files))
+            fid.write('\n')
+            print('Wrote list of {} files to {}'.format(len(list_of_files), filelists[s]))
     else:
-        for idx, inputs in enumerate(data_loader):
-            if idx >= n_points:
-                break
-            outputs = predictor.model(inputs)
+        print('File list already exists at {}'.format(filelists[s]))

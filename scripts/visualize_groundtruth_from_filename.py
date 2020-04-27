@@ -1,13 +1,12 @@
 import numpy as np
 from PIL import Image
 from detectron2.data import MetadataCatalog, build_detection_train_loader
-from detectron2.engine import DefaultTrainer
 from detectron2.utils.visualizer import Visualizer
 import os
 import tempfile
 
-from script_utils import get_maskrcnn_cfg
-from vis_utils import cv2_imshow, FigExporter
+from maskrcnnextension.train.script_utils import get_maskrcnn_cfg
+from maskrcnnextension.analysis.vis_utils import cv2_imshow, FigExporter
 
 
 def get_splits_and_ids_for_image_ids(image_ids, list_of_image_ids):

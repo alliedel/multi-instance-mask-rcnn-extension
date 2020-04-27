@@ -1,5 +1,5 @@
 """
-The goal of single_image_overfit_one_proposal is to prove we can overfit to a single selected proposal.  Reasoning:
+The goal of single_image_overfit is to prove we can overfit to a single image.  Reasoning:
 - With the customized head, we need to specialize the loss with respect to each proposal
 - With the customized head, we may be using only a subset of the proposals, or a different set entirely (interfacing
 at an earlier level).  By fitting to a single proposal, we're demonstrating that we are able to interface at the
@@ -7,45 +7,26 @@ proposal rather than image level.
 - Our next step will be to change this loss to the customized loss.
 """
 
-import cv2
-import numpy as np
 import os
 import torch
 import torch.distributed
 
-from vis_utils import show_prediction, FigExporter
 from detectron2.data import MetadataCatalog
-import vis_utils, script_utils
-from detectron2.evaluation.evaluator import inference_context
+from maskrcnnextension.analysis import vis_utils
+from maskrcnnextension.train import script_utils
 from detectron2.utils.events import EventStorage
-from script_utils import get_custom_maskrcnn_cfg, run_batch_results_visualization, get_datapoint_file, \
-    convert_datapoint_to_image_format, run_inference
-from trainer_apd import Trainer_APD
+from maskrcnnextension.train.script_utils import get_custom_maskrcnn_cfg, run_batch_results_visualization, get_datapoint_file, \
+    prep_image, run_inference
+from maskrcnnextension.train.trainer_apd import Trainer_APD
+from maskrcnnextension.analysis.vis_utils import visualize_groundtruth, FigExporter
 
 exporter_ = None
 
 
-def dbprint(*args, **kwargs):
-    print(*args, **kwargs)
-
-
-def equal_ids(id1, id2):
-    return str(id1).rstrip('0') == str(id2).rstrip('0')
-
-
-def prep_image(datapoint, cfg):
-    image_filename = datapoint['file_name']
-    input_image = datapoint['image']
-    input_image = np.asarray(input_image.permute(1, 2, 0)[:, :, [2, 1, 0]])
-    input_image_from_file = cv2.imread(image_filename)
-    input_image = convert_datapoint_to_image_format(input_image, input_image_from_file.shape[:2], cfg)
-    return input_image
-
-
-def train_on_single_image(trainer: Trainer_APD, datapoint, max_iters=100):
+def train_on_single_image(trainer: Trainer_APD, batch, max_iters=100):
     for t in range(max_iters):
         with EventStorage(0) as trainer.storage:
-            trainer.run_step_with_given_data(datapoint)
+            trainer.run_step_with_given_data(batch)
 
 
 def visualize_single_instance_predictions(img, instance_outputs, cfg, exporter, tag):
@@ -56,7 +37,7 @@ def visualize_single_instance_predictions(img, instance_outputs, cfg, exporter, 
         exporter.export_gcf(tag + f'_inst{i}')
 
 
-def main(image_id='486536', custom_head=False, max_iters=1, exporter=None):
+def main(image_id='486536', custom_head=True, max_iters=1, exporter=None):
     exporter = exporter or FigExporter()
     cfg = get_custom_maskrcnn_cfg()
     trainer = Trainer_APD(cfg)
@@ -89,7 +70,7 @@ def main(image_id='486536', custom_head=False, max_iters=1, exporter=None):
         figure_name = os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + cfg_tag + \
                       posttrain_tag + '_collated'
         figname = vis_utils.collate_figures(exporter.generated_figures[n_existing_exporter_images:], figure_name,
-                                            exporter=exporter)
+                                            exporter=exporter, delete_individuals=True)
         n_existing_exporter_images = len(exporter.generated_figures)
 
         # figure_name = visualize_results(batch, cfg, cfg_tag, exporter, image_id, input_image,
@@ -112,7 +93,10 @@ def main(image_id='486536', custom_head=False, max_iters=1, exporter=None):
         figure_name = os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + cfg_tag + \
                       posttrain_tag + '_collated'
         figname = vis_utils.collate_figures(exporter.generated_figures[n_existing_exporter_images:], figure_name,
-                                            exporter=exporter)
+                                            exporter=exporter, delete_individuals=True)
+
+
+        n_existing_exporter_images = len(exporter.generated_figures)
 
 
 def visualize_results(batch, cfg, cfg_tag, exporter, image_id, input_image, n_existing_exporter_images, outputs_d,
@@ -124,7 +108,7 @@ def visualize_results(batch, cfg, cfg_tag, exporter, image_id, input_image, n_ex
     figure_name = os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + cfg_tag + \
                   posttrain_tag + '_collated'
     figname = vis_utils.collate_figures(exporter.generated_figures[n_existing_exporter_images:], figure_name,
-                                        exporter=exporter)
+                                        exporter=exporter, delete_individuals=True)
     for dpt, outputs in zip(batch, outputs_d['outputs']):
         input_image = prep_image(dpt, cfg)
         img, pred_instances, _ = script_utils.prep_for_visualization(cfg, input_image,
@@ -134,11 +118,6 @@ def visualize_results(batch, cfg, cfg_tag, exporter, image_id, input_image, n_ex
                                                                                       cfg_tag)
 
     return figname
-
-
-def visualize_groundtruth(cfg, datapoint, exporter, image_id):
-    vis_utils.show_groundtruth(datapoint, cfg)
-    exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_groundtruth')
 
 
 if __name__ == '__main__':

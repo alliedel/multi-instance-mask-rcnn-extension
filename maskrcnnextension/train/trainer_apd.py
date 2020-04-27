@@ -11,10 +11,8 @@ The behavior of functions/classes in this file is subject to change,
 since they are meant to represent the "common default behavior" people need in their projects.
 """
 
-import logging
 import os
 from collections import OrderedDict
-import torch
 from fvcore.nn.precise_bn import get_bn_modules
 from torch.nn.parallel import DistributedDataParallel
 
@@ -33,16 +31,13 @@ from detectron2.evaluation import (
 )
 from detectron2.modeling import build_model
 from detectron2.solver import build_lr_scheduler, build_optimizer
-from detectron2.utils import comm
 from detectron2.utils.events import CommonMetricPrinter, JSONWriter, TensorboardXWriter
 import logging
 import numpy as np
 import time
-import weakref
 import torch
 
 import detectron2.utils.comm as comm
-from detectron2.utils.events import EventStorage
 
 
 class PredictorOrTrainerBase_APD(object):
@@ -97,7 +92,7 @@ class Predictor_APD(PredictorOrTrainerBase_APD):
         self.model.eval()
 
 
-from script_utils import Timer
+from maskrcnnextension.train.script_utils import Timer
 
 
 class Trainer_APD(TrainerBase):
