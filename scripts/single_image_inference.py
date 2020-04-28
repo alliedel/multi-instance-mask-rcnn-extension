@@ -14,8 +14,8 @@ import torch.distributed
 from detectron2.engine import DefaultPredictor
 from detectron2.evaluation.evaluator import inference_context
 
-from maskrcnnextension.train.script_utils import get_maskrcnn_cfg, DETECTRON_REPO
-from maskrcnnextension.analysis.vis_utils import cv2_imshow, FigExporter
+from multimaskextension.train.script_utils import get_maskrcnn_cfg, DETECTRON_REPO
+from multimaskextension.analysis.vis_utils import cv2_imshow, FigExporter
 
 
 def dbprint(*args, **kwargs):

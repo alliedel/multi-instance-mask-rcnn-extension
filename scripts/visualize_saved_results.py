@@ -4,8 +4,8 @@ import cv2
 from detectron2.data import MetadataCatalog
 from detectron2.utils.visualizer import Visualizer
 
-from maskrcnnextension.train import script_utils
-from maskrcnnextension.analysis.vis_utils import cv2_imshow, FigExporter
+from multimaskextension.train import script_utils
+from multimaskextension.analysis.vis_utils import cv2_imshow, FigExporter
 
 with open('output/mask_rcnn_R_50_FPN_3x/filelist_train.txt', 'r') as f:
     image_filenames = [s.strip() for s in f.readlines()]

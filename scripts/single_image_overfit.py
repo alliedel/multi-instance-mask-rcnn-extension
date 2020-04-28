@@ -12,13 +12,13 @@ import torch
 import torch.distributed
 
 from detectron2.data import MetadataCatalog
-from maskrcnnextension.analysis import vis_utils
-from maskrcnnextension.train import script_utils
+from multimaskextension.analysis import vis_utils
+from multimaskextension.train import script_utils
 from detectron2.utils.events import EventStorage
-from maskrcnnextension.train.script_utils import get_custom_maskrcnn_cfg, run_batch_results_visualization, get_datapoint_file, \
+from multimaskextension.train.script_utils import get_custom_maskrcnn_cfg, run_batch_results_visualization, get_datapoint_file, \
     prep_image, run_inference
-from maskrcnnextension.train.trainer_apd import Trainer_APD
-from maskrcnnextension.analysis.vis_utils import visualize_groundtruth, FigExporter
+from multimaskextension.train.trainer_apd import Trainer_APD
+from multimaskextension.analysis.vis_utils import visualize_groundtruth, FigExporter
 
 exporter_ = None
 

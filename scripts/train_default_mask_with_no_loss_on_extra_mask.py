@@ -14,13 +14,13 @@ import torch
 import torch.distributed
 
 from detectron2.data import MetadataCatalog
-from maskrcnnextension.analysis import vis_utils
-from maskrcnnextension.train import script_utils
+from multimaskextension.analysis import vis_utils
+from multimaskextension.train import script_utils
 from detectron2.utils.events import EventStorage
-from maskrcnnextension.train.script_utils import get_custom_maskrcnn_cfg, get_datapoint_file, \
+from multimaskextension.train.script_utils import get_custom_maskrcnn_cfg, get_datapoint_file, \
     convert_datapoint_to_image_format, run_inference, visualize_instancewise_predictions
-from maskrcnnextension.analysis.vis_utils import FigExporter
-from maskrcnnextension.train.trainer_apd import Trainer_APD
+from multimaskextension.analysis.vis_utils import FigExporter
+from multimaskextension.train.trainer_apd import Trainer_APD
 from detectron2.modeling.roi_heads.multi_mask_head_apd import CustomMaskRCNNConvUpsampleHeadAPD
 
 exporter_ = None

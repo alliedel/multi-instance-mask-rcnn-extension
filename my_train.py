@@ -15,13 +15,10 @@ from detectron2.engine import DefaultTrainer, default_argument_parser, default_s
 from detectron2.evaluation import COCOEvaluator, DatasetEvaluators, verify_results
 from detectron2.utils.logger import setup_logger
 
-from densepose import DatasetMapper, DensePoseCOCOEvaluator, add_densepose_config
-
 
 class Trainer(DefaultTrainer):
     @classmethod
     def build_evaluator(cls, cfg, dataset_name):
-        output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
         evaluators = [COCOEvaluator(dataset_name, cfg, True, output_folder)]
         if cfg.MODEL.DENSEPOSE_ON:
             evaluators.append(DensePoseCOCOEvaluator(dataset_name, True, output_folder))

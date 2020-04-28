@@ -5,8 +5,8 @@ from detectron2.utils.visualizer import Visualizer
 import os
 import tempfile
 
-from maskrcnnextension.train.script_utils import get_maskrcnn_cfg
-from maskrcnnextension.analysis.vis_utils import cv2_imshow, FigExporter
+from multimaskextension.train.script_utils import get_maskrcnn_cfg
+from multimaskextension.analysis.vis_utils import cv2_imshow, FigExporter
 
 
 def get_splits_and_ids_for_image_ids(image_ids, list_of_image_ids):

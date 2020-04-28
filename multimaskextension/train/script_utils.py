@@ -14,14 +14,14 @@ import torch.distributed
 from PIL import Image
 from torch import nn
 
-import vis_utils
+from multimaskextension.analysis import vis_utils
 from detectron2.config import get_cfg
 from detectron2.data import MetadataCatalog
 from detectron2.engine import DefaultTrainer
 from detectron2.evaluation.evaluator import inference_context
 from detectron2.modeling import detector_postprocess
 from detectron2.modeling.roi_heads import CustomMaskRCNNConvUpsampleHeadAPD
-from vis_utils import visualize_single_image_output, input_img_to_rgb
+from multimaskextension.analysis.vis_utils import visualize_single_image_output, input_img_to_rgb
 
 DETECTRON_MODEL_ZOO = os.path.expanduser('~/data/models/detectron_model_zoo')
 assert os.path.isdir(DETECTRON_MODEL_ZOO)
@@ -423,8 +423,9 @@ def equal_ids(id1, id2):
     return str(id1).rstrip('0') == str(id2).rstrip('0')
 
 
-def get_datapoint_file(cfg, image_id):
-    saved_input_file = f"input_{image_id}.pt"
+def get_datapoint_file(cfg, image_id, cachedir='./output/cache/input/'):
+    assert os.path.isdir(cachedir)
+    saved_input_file = os.path.join(cachedir, f"input_{image_id}.pt")
     # predictor.model.training = True
     if not os.path.exists(saved_input_file):
         dataloader = build_dataloader(cfg)
@@ -436,12 +437,12 @@ def get_datapoint_file(cfg, image_id):
 
 
 def build_dataloader(cfg):
-    dataloaders_eval = {
-        'val': DefaultTrainer.build_test_loader(cfg,
-                                                {'train': cfg.DATASETS.TRAIN[0], 'val': cfg.DATASETS.TEST[0]}[s])
-        for s
-        in ('train', 'val')
-    }
+    # dataloaders_eval = {
+    #     'val': DefaultTrainer.build_test_loader(cfg,
+    #                                             {'train': cfg.DATASETS.TRAIN[0], 'val': cfg.DATASETS.TEST[0]}[s])
+    #     for s
+    #     in ('train', 'val')
+    # }
     train_dataloader = DefaultTrainer.build_train_loader(cfg)
     return train_dataloader
 

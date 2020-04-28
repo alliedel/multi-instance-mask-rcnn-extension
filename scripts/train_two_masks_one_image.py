@@ -13,11 +13,11 @@ import torch
 import torch.distributed
 import torch.distributed
 
-from maskrcnnextension.train import script_utils
-from maskrcnnextension.analysis import vis_utils
+from multimaskextension.train import script_utils
+from multimaskextension.analysis import vis_utils
 from detectron2.utils.events import EventStorage
-from maskrcnnextension.train.script_utils import run_inference, visualize_instancewise_predictions, prep_image
-from maskrcnnextension.train.trainer_apd import Trainer_APD
+from multimaskextension.train.script_utils import run_inference, visualize_instancewise_predictions, prep_image
+from multimaskextension.train.trainer_apd import Trainer_APD
 
 exporter_ = None
 

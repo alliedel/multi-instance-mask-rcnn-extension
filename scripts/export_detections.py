@@ -10,8 +10,8 @@
 
 import cv2
 import os
-from maskrcnnextension.train.script_utils import get_maskrcnn_cfg, DETECTRON_REPO
-from maskrcnnextension.analysis.vis_utils import cv2_imshow, FigExporter
+from multimaskextension.train.script_utils import get_maskrcnn_cfg, DETECTRON_REPO
+from multimaskextension.analysis.vis_utils import cv2_imshow, FigExporter
 from detectron2.engine import DefaultPredictor
 
 
@@ -78,7 +78,7 @@ print('Number of validation images: ', len(dataloaders['val']))
 
 # for each image in training set
 
-from maskrcnnextension.train.script_utils import just_inference_on_dataset, get_image_identifiers
+from multimaskextension.train.script_utils import just_inference_on_dataset, get_image_identifiers
 
 outdir = os.path.join('output', os.path.splitext(os.path.basename(config_filepath))[0])
 if not os.path.exists(outdir):
