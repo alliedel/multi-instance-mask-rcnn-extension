@@ -68,13 +68,14 @@ class ModelHistorySaver(object):
         if (n_vals_so_far / self.adaptive_save_model_every) >= (self.max_n_saved_models):
             while (n_vals_so_far / self.adaptive_save_model_every) >= self.max_n_saved_models:
                 self.adaptive_save_model_every *= 2  # should use ceil, log2 to compute instead (this is hacky)
-            iterations_to_keep = range(0, most_recent_itr + self.interval_validate,
-                                       self.adaptive_save_model_every * self.interval_validate)
+            iterations_to_keep = list(range(0, most_recent_itr + self.interval_validate,
+                                            self.adaptive_save_model_every * self.interval_validate))
             if most_recent_itr not in iterations_to_keep:
                 iterations_to_keep.append(most_recent_itr)
             for j in iterations_to_keep:  # make sure the files we assume exist actually exist
                 f = self.get_model_filename_from_iteration(j)
-                assert os.path.exists(f), '{} does not exist'.format(f)
+                if not os.path.exists(f):
+                    print('WARNING: {} does not exist'.format(f))
 
             for model_file in self.get_list_of_checkpoint_files():
                 iteration_number = self.get_iteration_from_model_filename(model_file)
@@ -113,17 +114,22 @@ class ConservativeExportDecider(object):
 
     def is_prev_or_next_export_iteration(self, iteration):
         if iteration > self.next_export_iteration:
-            raise Exception('Missed an export at iteration {}'.format(self.next_export_iteration ** 3))
-        else:
-            if iteration == self.next_export_iteration:
-                self.n_previous_exports += 1
-                return True
+            if self.next_export_iteration == 0:  # Hack for 'resume'
+                while iteration > self.get_item_in_sequence(self.n_previous_exports):
+                    self.n_previous_exports += 1
             else:
-                return iteration == self.current_export_iteration
+                print(Warning('Missed an export at iteration {}'.format(self.next_export_iteration)))
+                while iteration > self.get_item_in_sequence(self.n_previous_exports):
+                    self.n_previous_exports += 1
+
+        if iteration == self.next_export_iteration:
+            self.n_previous_exports += 1
+            return True
+        else:
+            return iteration == self.current_export_iteration
 
 
 class TrainerExporter(object):
-
     log_headers = ['']
 
     def __init__(self, out_dir, export_config: ExportConfig,
@@ -159,7 +165,8 @@ class TrainerExporter(object):
 
         self.run_loss_updates = True
         model_checkpoint_dir = os.path.join(self.out_dir, 'model_checkpoints')
-        os.mkdir(model_checkpoint_dir)
+        if not os.path.exists(model_checkpoint_dir):  # if resume, this will be false
+            os.mkdir(model_checkpoint_dir)
         self.model_history_saver = ModelHistorySaver(model_checkpoint_dir=model_checkpoint_dir,
                                                      interval_validate=self.export_config.interval_validate,
                                                      max_n_saved_models=self.export_config.max_n_saved_models)

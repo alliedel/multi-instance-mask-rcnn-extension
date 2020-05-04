@@ -9,11 +9,13 @@ The behavior of functions/classes in this file is subject to change,
 since they are meant to represent the "common default behavior" people need in their projects.
 """
 import logging
+import os
 import time
 from collections import OrderedDict
 
 import numpy as np
 import torch
+import tqdm
 from tensorboardX import SummaryWriter
 from torch.nn.parallel import DistributedDataParallel
 
@@ -91,7 +93,7 @@ class Predictor_APD(PredictorOrTrainerBase_APD):
 
 class Trainer_APD(TrainerBase):
 
-    def __init__(self, cfg, out_dir, interval_validate=1000, n_model_checkpoints=20):
+    def __init__(self, cfg, out_dir=None, interval_validate=1000, n_model_checkpoints=20, checkpoint_resume=None):
         super().__init__()
 
         self.cfg = cfg.clone()  # cfg can be modified by model
@@ -101,6 +103,8 @@ class Trainer_APD(TrainerBase):
 
         checkpointer = DetectionCheckpointer(self.model)
         checkpointer.load(cfg.MODEL.WEIGHTS)
+
+        self.iter = 0
 
         self.transform_gen = T.ResizeShortestEdge(
             [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
@@ -132,7 +136,7 @@ class Trainer_APD(TrainerBase):
             optimizer=self.optimizer,
             scheduler=self.scheduler,
         )
-        self.start_iter = 0
+        self.start_iter = 0  # Will be changed if/when resume state is loaded
         self.max_iter = cfg.SOLVER.MAX_ITER
         self.cfg = cfg
 
@@ -150,6 +154,32 @@ class Trainer_APD(TrainerBase):
             out_dir=out_dir, export_config=export_config, tensorboard_writer=tensorboard_writer,
             metric_makers=metric_makers)
         self.t_val = None  # We need to initialize this when we make our validation watcher.
+
+        self.load_checkpoint(checkpoint_file=checkpoint_resume)
+
+        self.pbar = tqdm.tqdm(initial=self.start_iter, total=self.max_iter, desc='Training')
+
+    def load_checkpoint(self, checkpoint_file):
+        if checkpoint_file is None:
+            return
+        assert os.path.exists(checkpoint_file)
+        state = torch.load(checkpoint_file)
+        for key, value in state.items():
+            if key == 'best_mean_iu' or key == 'mean_iu':
+                pass
+            elif key == 'arch':
+                assert self.model.__class__.__name__ == value
+            elif key == 'epoch':
+                pass
+            elif key == 'iteration':
+                self.start_iter = value
+                self.iter = value
+            elif key == 'model_state_dict':
+                self.model.load_state_dict(value)
+            elif key == 'optim_state_dict':
+                self.optimizer.load_state_dict(value)
+            else:
+                raise NotImplementedError('No loading written for {}'.format(key))
 
     def train(self):
         """
@@ -170,6 +200,7 @@ class Trainer_APD(TrainerBase):
         """
         Implement the standard training logic described above.
         """
+        self.pbar.update(1)
         assert self.model.training, "[SimpleTrainer] model was changed to eval mode!"
         start = time.perf_counter()
         """
