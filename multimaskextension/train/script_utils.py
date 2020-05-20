@@ -352,7 +352,7 @@ def run_vanilla_evaluation(images, cfg, outputs, image_ids, model=None, exporter
         # d. Visualize and export Mask R-CNN predictions
         metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
         proposal_score_thresh = None if model is None else model.roi_heads.test_score_thresh
-        visualize_single_image_output(img, metadata, instances=output, proposals=None, image_id=str(image_id),
+        visualize_single_image_output(img, metadata, pred_instances=output, proposals=None, image_id=str(image_id),
                                       extra_proposal_details=None,
                                       scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter)
 
@@ -379,7 +379,7 @@ def run_single_image_results_visualization(cfg, exporter, extra_proposal_details
     # d. Visualize and export Mask R-CNN predictions
     metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
     proposal_score_thresh = None if model is None else model.roi_heads.test_score_thresh
-    visualize_single_image_output(img, metadata, instances=output, proposals=proposals, image_id=str(image_id),
+    visualize_single_image_output(img, metadata, pred_instances=output, proposals=proposals, image_id=str(image_id),
                                   extra_proposal_details=extra_proposal_details,
                                   scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter,
                                   visualize_just_image=visualize_just_image)
@@ -401,6 +401,11 @@ def prep_for_visualization(cfg, img, pred_instances=None, proposals=None):
                 pred_instances.pred_masks = pred_instances.pred_masks.resize(B, 1, H, W)
             else:
                 assert len(pred_instances.pred_masks.shape) == 4
+            if len(pred_instances.pred_masks_soft.shape) == 3:
+                B, H, W = pred_instances.pred_masks_soft.shape
+                pred_instances.pred_masks_soft = pred_instances.pred_masks_soft.resize(B, 1, H, W)
+            else:
+                assert len(pred_instances.pred_masks_soft.shape) == 4
             pred_instances = detector_postprocess(pred_instances, output_size[0], output_size[1])
     img = input_img_to_rgb(img, cfg)
     return img, pred_instances, proposals

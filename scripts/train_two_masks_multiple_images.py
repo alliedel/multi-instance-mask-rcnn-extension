@@ -7,16 +7,18 @@ Step 1b: Verify with multimask inference to see that the set of weights is learn
 depending on which one we switch between.
 
 """
-
+import local_pyutils
 import os
 import torch
 import torch.distributed
 import torch.distributed
 
+import multimaskextension.analysis.vis_utils
 from multimaskextension.train import script_utils
 from multimaskextension.analysis import vis_utils
 from detectron2.utils.events import EventStorage
 from multimaskextension.train.script_utils import run_inference, visualize_instancewise_predictions, prep_image
+from multimaskextension.train import script_utils
 from multimaskextension.train.trainer_apd import Trainer_APD
 
 exporter_ = None
@@ -51,7 +53,13 @@ def main(image_ids=('306284', '486536', '9'), maxitr=10000, step=500):
 
     print('Beginning setup...')
     cfg = script_utils.get_custom_maskrcnn_cfg()
-    trainer = Trainer_APD(cfg)
+
+    cfg_dictionary = {'image_ids': image_ids}
+    output_dir = local_pyutils.get_log_dir('output/logs/train/train_primary_secondary_full',
+                                           config_dictionary=cfg_dictionary)
+    config_outpath = os.path.join(output_dir, "config.yaml")
+
+    trainer = Trainer_APD(cfg, output_dir, interval_validate=step, n_model_checkpoints=10)
 
     print('Completing setup...')
     batches = []
@@ -68,6 +76,7 @@ def main(image_ids=('306284', '486536', '9'), maxitr=10000, step=500):
         for masks_key in ['pred_masks1', 'pred_masks2']:
             pretraining(batch, cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), exporter, image_id, trainer,
                         masks_key=masks_key)
+    return
 
     input_images = [prep_image(batch[0], cfg) for batch in batches]
     strt = 0
@@ -97,7 +106,7 @@ def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, 
                                                                  pred_instances=outputs['instances'],
                                                                  proposals=None)
     posttrain_tag = f'_posttrain_{max_iters}'
-    visualize_instancewise_predictions(
+    script_utils.visualize_instancewise_predictions(
         img, pred_instances, cfg, exporter, tag=f'{image_id}' + posttrain_tag + cfg_tag)
     figure_name = image_id + cfg_tag + posttrain_tag + '_collated'
     figname = exporter.collate_previous('{:02d}'.format(exporter.fig_number) + 'c_' + figure_name,
@@ -122,8 +131,11 @@ def pretraining(batch, cfg, cfg_tag, exporter, image_id, trainer, masks_key=None
     else:
         assert masks_key.startswith('pred_masks')
         for o in outputs_d['outputs']:
+            try:
+                o['instances'].set('pred_masks_soft', o['instances'].get(masks_key + '_soft'))
+            except AttributeError:
+                print(Warning('Soft scores not found: {}'.format(masks_key + '_soft')))
             o['instances'].set('pred_masks', o['instances'].get(masks_key))
-            o['instances'].pred_masks = o['instances'].get(masks_key)
             assert torch.all(o['instances'].pred_masks == o['instances'].get(masks_key))
 
     for dpt, outputs in zip(batch, outputs_d['outputs']):
@@ -135,10 +147,19 @@ def pretraining(batch, cfg, cfg_tag, exporter, image_id, trainer, masks_key=None
                                                                      pred_instances=outputs['instances'],
                                                                      proposals=None)
         posttrain_tag = '_pretrain'
-        visualize_instancewise_predictions(img, pred_instances, cfg, exporter, tag=f'{image_id}' + posttrain_tag +
+        script_utils.visualize_instancewise_predictions(img, pred_instances, cfg, exporter, tag=f'{image_id}' +
+                                                                                                posttrain_tag +
                                                                                    cfg_tag)
         figure_name = os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + cfg_tag + \
                       posttrain_tag + '_collated'
+        figname = exporter.collate_previous('{:02d}'.format(exporter.fig_number) + 'c_' + figure_name,
+                                            delete_individuals=True)
+        multimaskextension.analysis.vis_utils.visualize_instancewise_soft_predictions(pred_instances, exporter,
+                                                                                      tag=f'{image_id}' +
+                                                                                          posttrain_tag +
+                                                                                          cfg_tag)
+        figure_name = os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + cfg_tag + \
+                      posttrain_tag + '_soft' + '_collated'
         figname = exporter.collate_previous('{:02d}'.format(exporter.fig_number) + 'c_' + figure_name,
                                             delete_individuals=True)
         dbprint('Exported', figname)

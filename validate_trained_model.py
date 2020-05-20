@@ -7,15 +7,17 @@ Step 1b: Verify with multimask inference to see that the set of weights is learn
 depending on which one we switch between.
 
 """
+import argparse
+
 import local_pyutils
 import os
 import torch
 import torch.distributed
 import torch.distributed
 
-from multimaskextension.train import script_utils
-from multimaskextension.analysis import vis_utils
 from detectron2.utils.events import EventStorage
+from multimaskextension.analysis import vis_utils
+from multimaskextension.train import script_utils
 from multimaskextension.train.script_utils import run_inference, visualize_instancewise_predictions, prep_image
 from multimaskextension.train.trainer_apd import Trainer_APD
 
@@ -46,9 +48,7 @@ def stochastic_train_on_set(trainer: Trainer_APD, batches, max_itr=100, start_it
             trainer.run_step_with_given_data(batches[int(t % N)])
 
 
-def main(image_ids=('306284', '486536', '9'),
-         resume='output/logs/train/train_primary_secondary_full_2020-04-27-224509_VCS-9c83121_MAX_ITR-1000000_HEAD_TYPE-custom/'
-                'checkpoint.pth.tar'):
+def main(resume, image_ids=('306284', '486536', '9')):
     exporter = vis_utils.FigExporter()
 
     print('Beginning setup...')
@@ -62,17 +62,6 @@ def main(image_ids=('306284', '486536', '9'),
     for image_id in image_ids:
         datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
         batches.append([datapoint] if type(datapoint) is not list else datapoint)
-
-    if resume is not None:
-        output_dir = os.path.dirname(resume)
-        assert os.path.exists(os.path.join(output_dir, 'config.yaml'))
-        config_outpath = os.path.join(output_dir, "config_resume.yaml")
-        with open(config_outpath, "w") as f:
-            f.write(cfg.dump())
-    else:
-        output_dir = local_pyutils.get_log_dir('output/logs/train/train_primary_secondary_full',
-                                               config_dictionary={})
-        config_outpath = os.path.join(output_dir, "config.yaml")
 
     input_images = [prep_image(batch[0], cfg) for batch in batches]
 
@@ -92,6 +81,10 @@ def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, 
     else:
         assert masks_key.startswith('pred_masks')
         for o in outputs_d['outputs']:
+            try:
+                o['instances'].set('pred_masks_soft', o['instances'].get(masks_key + '_soft'))
+            except AttributeError:
+                print(Warning('Soft scores not found: {}'.format(masks_key + '_soft')))
             o['instances'].set('pred_masks', o['instances'].get(masks_key))
     outputs = outputs_d['outputs'][0]
 
@@ -101,7 +94,13 @@ def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, 
     posttrain_tag = f'_posttrain_{max_iters}'
     visualize_instancewise_predictions(
         img, pred_instances, cfg, exporter, tag=f'{image_id}' + posttrain_tag + cfg_tag)
-    figure_name = image_id + cfg_tag + posttrain_tag + '_collated'
+    figure_name = image_id + cfg_tag + posttrain_tag + '_pred'
+    figname = exporter.collate_previous('{:02d}'.format(exporter.fig_number) + 'c_' + figure_name,
+                                        delete_individuals=True)
+    dbprint('Exported', figname)
+    vis_utils.visualize_instancewise_soft_predictions(
+        pred_instances, exporter, tag=f'{image_id}' + posttrain_tag + cfg_tag)
+    figure_name = image_id + cfg_tag + posttrain_tag + '_pred_soft'
     figname = exporter.collate_previous('{:02d}'.format(exporter.fig_number) + 'c_' + figure_name,
                                         delete_individuals=True)
     dbprint('Exported', figname)
@@ -110,6 +109,7 @@ def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, 
                                                             image_id, img, trainer.model, outputs, outputs_d[
                                                                 'proposalss'][0],
                                                             visualize_just_image=False)
+
         figname = exporter.collate_previous(
             '{:02d}'.format(exporter.fig_number) + 'c_' + os.path.splitext(os.path.basename(__file__))[
                 0] + '_' + image_id + cfg_tag +
@@ -117,5 +117,14 @@ def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, 
         dbprint('Exported', figname)
 
 
+
+
+def get_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model-pth', required=False, default=None)
+    return parser
+
+
 if __name__ == '__main__':
-    main()
+    args = get_parser().parse_args()
+    main(resume=args.model_pth)

@@ -60,9 +60,13 @@ def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--resume-logdir', required=False, default=None)
     parser.add_argument('--rel-model-pth', required=False, default='checkpoint.pth.tar')
+    parser.add_argument('--config_filepath', required=False, default='./detectron2_repo/configs/'
+                                                                     'COCO-InstanceSegmentation/'
+                                                                     'mask_rcnn_R_50_FPN_3x_APD.yaml')
     return parser
 
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    main(resume_logdir=args.resume_logdir, rel_model_pth=args.rel_model_pth)
+    main(config_filepath=args.config_filepath, resume_logdir=args.resume_logdir,
+         rel_model_pth=args.rel_model_pth)

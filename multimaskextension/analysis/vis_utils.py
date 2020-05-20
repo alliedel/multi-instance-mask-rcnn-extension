@@ -34,7 +34,7 @@ def cv2_imshow(img):
     return h
 
 
-def visualize_single_image_output(img, metadata, instances, proposals, image_id, extra_proposal_details=None,
+def visualize_single_image_output(img, metadata, pred_instances, proposals, image_id, extra_proposal_details=None,
                                   scale=2.0, map_instance_to_proposal_vis=True, proposal_score_thresh=None,
                                   exporter=None, visualize_just_image=False, basename=''):
     assert img is not None
@@ -55,14 +55,15 @@ def visualize_single_image_output(img, metadata, instances, proposals, image_id,
         exporter.export_gcf(basename + image_id + '_proposals_past_thresh')
 
     if selected_proposal_idxs is not None:
-        assert len(selected_proposal_idxs) == len(instances['instances'])
-        show_selected_proposals(img, instances, proposals, selected_proposal_idxs, map_instance_to_proposal_vis,
+        assert len(selected_proposal_idxs) == len(pred_instances['instances'])
+        show_selected_proposals(img, pred_instances, proposals, selected_proposal_idxs, map_instance_to_proposal_vis,
                                 metadata, scale)
         exporter.export_gcf(basename + image_id + '_selected_proposals')
 
-    if instances is not None:
-        show_prediction(img, instances, metadata, scale)
+    if pred_instances is not None:
+        show_prediction(img, pred_instances, metadata, scale)
         exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_prediction')
+        show_prediction(img, pred_instances, metadata, scale)
 
 
 def show_prediction(img, instances, metadata, scale=2.0):
@@ -126,7 +127,8 @@ def get_font_scale(text, height_lim, width_lim, start_scale=1.0, decr=0.1, font=
         if font_scale < decr:
             text_width, text_height = cv2.getTextSize(text, font, font_scale, line_type)[0]
             if text_width < 10 or text_height < 10:
-                raise ValueError(f'Could not find scale to fit text \'{text}\' within ({height_lim}, {width_lim})')
+                print(Warning(f'Could not find scale to fit text \'{text}\' within ({height_lim}, {width_lim})'))
+                return min(start_scale, font_scale / decr)
             decr *= decr
 
     # dbprint(text, text_height, text_width)
@@ -265,6 +267,24 @@ class FigExporter(object):
 
     def export_gcf(self, tag=None, use_number=True):
 
+        fname = self.get_full_impath(tag, use_number)
+
+        FigExporter.fig_number += 1
+        plt.savefig(fname)
+        dbprint('Exported {}'.format(fname))
+        self.generated_figures.append(fname)
+
+    def cv2_imwrite(self, im_arr, tag=None, use_number=True):
+
+        fname = self.get_full_impath(tag, use_number)
+        if os.path.splitext(fname)[1] == '':
+            fname += '.png'
+        FigExporter.fig_number += 1
+        cv2.imwrite(fname, im_arr)
+        dbprint('Exported {}'.format(fname))
+        self.generated_figures.append(fname)
+
+    def get_full_impath(self, tag, use_number):
         if tag is None:
             assert use_number
             basename = self.curr_fig_number_as_str + self.ext
@@ -273,13 +293,8 @@ class FigExporter(object):
                 basename = self.curr_fig_number_as_str + '_' + tag + self.ext
             else:
                 basename = tag + self.ext
-
         fname = os.path.join(self.workspace_dir, basename)
-
-        FigExporter.fig_number += 1
-        plt.savefig(fname)
-        dbprint('Exported {}'.format(fname))
-        self.generated_figures.append(fname)
+        return fname
 
     def collate_previous(self, out_name, delete_individuals=None):
         delete_individuals = delete_individuals if delete_individuals is not None \
@@ -328,3 +343,17 @@ def visualize_instancewise_groundtruth(datapoint, cfg, exporter, tag=None):
         )
         cv2_imshow(v.get_image()[:, :, ::-1])
         exporter.export_gcf(tag + ('_' if tag is not None else '') + f'inst{i}')
+
+
+def visualize_instancewise_soft_predictions(instance_outputs, exporter: FigExporter, tag):
+    n_instances = len(instance_outputs)
+    h = plt.figure()
+    for i in range(n_instances):
+        instance = instance_outputs[[i]]
+        soft_mask = instance.pred_masks_soft.cpu().reshape(28, 28)
+        assert soft_mask.max() <= 1.0
+        assert soft_mask.min() >= 0.0
+        plt.gca().imshow(soft_mask, cmap='gray', vmin=0.0, vmax=1.0)
+        exporter.export_gcf(tag + f'_inst{i}_soft')
+        h.clf()
+    plt.close(h)
