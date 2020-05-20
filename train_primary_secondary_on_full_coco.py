@@ -29,7 +29,6 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
          resume_logdir=None, rel_model_pth='checkpoint.pth.tar'):
     print('Running setup...')
     cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath)
-    cfg.SOLVER.MAX_ITER = 1000000
     head_type = 'custom'
     config_dictionary = {'max_itr': cfg.SOLVER.MAX_ITER, 'head_type': head_type}
 
@@ -47,8 +46,9 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
         f.write(cfg.dump())
     print("Full config saved to {}".format(os.path.abspath(config_outpath)))
 
+    checkpoint_resume = None if resume_logdir is None else os.path.join(resume_logdir, rel_model_pth)
     trainer = Trainer_APD(cfg, out_dir=output_dir, interval_validate=1000, n_model_checkpoints=20,
-                          checkpoint_resume=os.path.join(resume_logdir, rel_model_pth))
+                          checkpoint_resume=checkpoint_resume)
 
     script_utils.activate_head_type(trainer, head_type)
 
