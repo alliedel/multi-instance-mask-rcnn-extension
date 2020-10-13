@@ -176,7 +176,10 @@ def download_detectron_model_to_local_zoo(relpath):
 
 
 def get_custom_maskrcnn_cfg(
-        config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x_APD.yaml"):
+        config_filepath=f"configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x_APD.yaml"):
+
+    ""
+
     cfg = get_maskrcnn_cfg(config_filepath)
     standard_state_file = cfg.MODEL.WEIGHTS
     ext = os.path.splitext(standard_state_file)[1]
