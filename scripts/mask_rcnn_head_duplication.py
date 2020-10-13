@@ -17,7 +17,7 @@ import os
 import torch
 import torch.distributed
 
-from detectron2.modeling.roi_heads.multi_roi_heads_apd import MultiROIHeadsAPD
+from multimaskextension.model.multi_roi_heads_apd import MultiROIHeadsAPD
 from detectron2.evaluation.evaluator import inference_context
 from multimaskextension.train import script_utils
 from multimaskextension.analysis.vis_utils import collate_figures, FigExporter

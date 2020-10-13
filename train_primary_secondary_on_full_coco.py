@@ -13,7 +13,6 @@ Things left for other scripts:
 import os
 import argparse
 import local_pyutils
-import torch
 
 from multimaskextension.train import script_utils
 from multimaskextension.train.trainer_apd import Trainer_APD
