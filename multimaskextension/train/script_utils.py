@@ -20,7 +20,7 @@ from detectron2.data import MetadataCatalog
 from detectron2.engine import DefaultTrainer
 from detectron2.evaluation.evaluator import inference_context
 from detectron2.modeling import detector_postprocess
-from detectron2.modeling.roi_heads import CustomMaskRCNNConvUpsampleHeadAPD
+from multimaskextension.model.multi_mask_head_apd import CustomMaskRCNNConvUpsampleHeadAPD
 from multimaskextension.analysis.vis_utils import visualize_single_image_output, input_img_to_rgb
 
 DETECTRON_MODEL_ZOO = os.path.expanduser('~/data/models/detectron_model_zoo')
@@ -521,7 +521,7 @@ def visualize_instancewise_predictions(img, instance_outputs, cfg, exporter, tag
 
 def activate_head_type(trainer, head_type):
     trainer.model.roi_heads.active_mask_head = head_type
-    if head_type is 'custom':
+    if head_type == 'custom':
         assert type(trainer.model.roi_heads.mask_heads[trainer.model.roi_heads.active_mask_head]) is \
                CustomMaskRCNNConvUpsampleHeadAPD, 'Not using custom head; head type is {}'.format(type(
             trainer.model.roi_heads.mask_heads[trainer.model.roi_heads.active_mask_head]))
