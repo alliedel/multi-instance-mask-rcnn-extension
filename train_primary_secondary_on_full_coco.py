@@ -15,6 +15,16 @@ import argparse
 import local_pyutils
 import torch
 
+import os
+
+import detectron2.utils.comm as comm
+from detectron2.checkpoint import DetectionCheckpointer
+from detectron2.config import get_cfg
+from detectron2.data import build_detection_test_loader, build_detection_train_loader
+from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, launch
+from detectron2.evaluation import COCOEvaluator, DatasetEvaluators, verify_results
+from detectron2.utils.logger import setup_logger
+
 from multimaskextension.train import script_utils
 from multimaskextension.train.trainer_apd import Trainer_APD
 
@@ -25,8 +35,12 @@ def dbprint(*args, **kwargs):
     print(*args, **kwargs)
 
 
-def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x_APD.yaml',
-         resume_logdir=None, rel_model_pth='checkpoint.pth.tar'):
+def main(args):
+    config_filepath = args.config_filepath  #
+    # './detectron2_repo/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x_APD.yaml',
+    resume_logdir = args.resume_logdir  # None,
+    rel_model_pth = args.rel_model_pth #  'checkpoint.pth.tar'
+
     print('Running setup...')
     cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath)
     head_type = 'custom'
@@ -57,7 +71,7 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
 
 
 def get_parser():
-    parser = argparse.ArgumentParser()
+    parser = default_argument_parser()
     parser.add_argument('--resume-logdir', required=False, default=None)
     parser.add_argument('--rel-model-pth', required=False, default='checkpoint.pth.tar')
     parser.add_argument('--config_filepath', required=False, default='./detectron2_repo/configs/'
@@ -68,5 +82,13 @@ def get_parser():
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    main(config_filepath=args.config_filepath, resume_logdir=args.resume_logdir,
-         rel_model_pth=args.rel_model_pth)
+    print("Command Line Args:", args)
+    main(args)
+    # launch(
+    #     main,
+    #     args.num_gpus,
+    #     num_machines=args.num_machines,
+    #     machine_rank=args.machine_rank,
+    #     dist_url=args.dist_url,
+    #     args=(args,),
+    # )

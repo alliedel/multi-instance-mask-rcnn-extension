@@ -57,20 +57,24 @@ def main(resume, image_ids=('306284', '486536', '9')):
     head_type = 'custom'
     script_utils.activate_head_type(trainer, head_type)
 
-    print('Completing setup...')
-    batches = []
-    for image_id in image_ids:
-        datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
-        batches.append([datapoint] if type(datapoint) is not list else datapoint)
+    trainer.test(cfg, trainer.model)
 
-    input_images = [prep_image(batch[0], cfg) for batch in batches]
-
-    cfg_tag = 'cfg_tag'
-    itr = trainer.iter
-    for masks_key in ['pred_masks1', 'pred_masks2']:
-        for image_id, input_image, batch in zip(image_ids, input_images, batches):
-            posttraining(cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), batch[0], exporter, image_id,
-                         input_image, itr, trainer, masks_key=masks_key, show_pipeline=False)
+    return
+    #
+    # print('Completing setup...')
+    # batches = []
+    # for image_id in image_ids:
+    #     datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
+    #     batches.append([datapoint] if type(datapoint) is not list else datapoint)
+    #
+    # input_images = [prep_image(batch[0], cfg) for batch in batches]
+    #
+    # cfg_tag = 'cfg_tag'
+    # itr = trainer.iter
+    # for masks_key in ['pred_masks1', 'pred_masks2']:
+    #     for image_id, input_image, batch in zip(image_ids, input_images, batches):
+    #         posttraining(cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), batch[0], exporter, image_id,
+    #                      input_image, itr, trainer, masks_key=masks_key, show_pipeline=False)
 
 
 def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, trainer, masks_key='pred_masks',
