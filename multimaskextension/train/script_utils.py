@@ -15,7 +15,7 @@ from PIL import Image
 from torch import nn
 
 from multimaskextension.analysis import vis_utils
-from detectron2.config import get_cfg
+from multimaskextension.config import get_cfg
 from detectron2.data import MetadataCatalog
 from detectron2.engine import DefaultTrainer
 from detectron2.evaluation.evaluator import inference_context
@@ -23,9 +23,15 @@ from detectron2.modeling import detector_postprocess
 from multimaskextension.model.multi_mask_head_apd import CustomMaskRCNNConvUpsampleHeadAPD
 from multimaskextension.analysis.vis_utils import visualize_single_image_output, input_img_to_rgb
 
-DETECTRON_MODEL_ZOO = os.path.expanduser('~/data/models/detectron_model_zoo')
-assert os.path.isdir(DETECTRON_MODEL_ZOO)
 DETECTRON_REPO = './detectron2_repo'
+if os.path.isdir('data/models'):
+    DETECTRON_MODEL_ZOO = 'data/models/detectron_model_zoo'
+else:
+    if 'DATAPATH' not in os.environ:
+        assert 'Could not find data/models.  Symlink to ./data, ' \
+               'or set the DATAPATH environment variable'
+    DETECTRON_MODEL_ZOO = os.path.join(os.environ['DATAPATH'], 'models/detectron_model_zoo')
+assert os.path.isdir(DETECTRON_MODEL_ZOO), DETECTRON_MODEL_ZOO
 
 
 def dbprint(*args, **kwargs):
@@ -201,6 +207,7 @@ def get_custom_maskrcnn_cfg(config_filepath=f"configs/COCO-InstanceSegmentation/
 def get_maskrcnn_cfg(
         config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"):
     cfg = get_cfg()
+    assert os.path.exists(config_filepath), f"{config_filepath} does not exist"
     cfg.merge_from_file(config_filepath)
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
     # Find a model from detectron2's model zoo. You can either use the https://dl.fbaipublicfiles.... url,

@@ -244,9 +244,9 @@ class MultiROIHeadsAPD(StandardROIHeads):
             proposal_boxes = [x.proposal_boxes for x in proposals]
             mask_features = self.mask_pooler(features, proposal_boxes)
             mask_logits = self.mask_heads[self.active_mask_head](mask_features)
-            if self.active_mask_head is 'standard':
+            if self.active_mask_head == 'standard':
                 return {"loss_mask": mask_rcnn_loss(mask_logits, proposals)}
-            elif self.active_mask_head is 'custom':
+            elif self.active_mask_head == 'custom':
                 return {"loss_mask": multi_mask_head_apd.multi_mask_rcnn_loss(mask_logits, proposals)}
         else:
             pred_boxes = [x.pred_boxes for x in instances]

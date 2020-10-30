@@ -14,6 +14,10 @@ import os
 import argparse
 import local_pyutils
 
+# We do this to force the multiroiheads to be added to the registry
+from multimaskextension.model import multi_roi_heads_apd
+from multimaskextension.data import registryextension
+
 from multimaskextension.train import script_utils
 from multimaskextension.train.trainer_apd import Trainer_APD
 
@@ -45,9 +49,9 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
     with open(config_outpath, "w") as f:
         f.write(cfg.dump())
     print("Full config saved to {}".format(os.path.abspath(config_outpath)))
-
+    checkpoint_resume = None if resume_logdir is None else os.path.join(resume_logdir, rel_model_pth)
     trainer = Trainer_APD(cfg, out_dir=output_dir, interval_validate=1000, n_model_checkpoints=20,
-                          checkpoint_resume=os.path.join(resume_logdir, rel_model_pth))
+                          checkpoint_resume=checkpoint_resume)
 
     script_utils.activate_head_type(trainer, head_type)
 
@@ -59,9 +63,8 @@ def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--resume-logdir', required=False, default=None)
     parser.add_argument('--rel-model-pth', required=False, default='checkpoint.pth.tar')
-    parser.add_argument('--config_filepath', required=False, default='./detectron2_repo/configs/'
-                                                                     'COCO-InstanceSegmentation/'
-                                                                     'mask_rcnn_R_50_FPN_3x_APD.yaml')
+    parser.add_argument('--config_filepath', required=False,
+                        default='./configs/mask_rcnn_R_50_FPN_3x_APD.yaml')
     return parser
 
 
