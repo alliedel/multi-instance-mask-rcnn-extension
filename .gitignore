@@ -9,5 +9,6 @@ datasets
 output/*
 *.jpg
 *.mp4
+data/*
 
 
