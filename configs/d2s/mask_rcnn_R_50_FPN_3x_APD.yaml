@@ -1,4 +1,4 @@
-_BASE_: "Base-RCNN-FPN-APD.yaml"
+_BASE_: "../Base-RCNN-FPN-APD.yaml"
 MODEL:
   WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   MASK_ON: True
@@ -13,5 +13,5 @@ SOLVER:
   STEPS: (210000, 250000)
   MAX_ITER: 270000
 DATASETS:
-  TRAIN: ("coco_2017_train",)
-  TEST: ("coco_2017_val",)
+  TRAIN: ("d2s_train",)
+  TEST: ("d2s_val",)
