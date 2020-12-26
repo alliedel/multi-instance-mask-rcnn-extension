@@ -30,6 +30,7 @@ MODEL:
     INIT_ACTIVATED_MASK_HEAD: "standard"
     NUM_CONV: 4
     POOLER_RESOLUTION: 14
+    MATCHING_LOSS: False
 DATASETS:
   TRAIN: ("coco_2017_train",)
   TEST: ("coco_2017_val",)

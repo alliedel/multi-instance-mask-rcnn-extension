@@ -32,8 +32,9 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
          resume_logdir=None, rel_model_pth='checkpoint.pth.tar'):
     print('Running setup...')
     cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath)
+
     cfg.SOLVER.MAX_ITER = 1000000
-    head_type = 'custom'
+    head_type = cfg.MODEL.ROI_MASK_HEAD.INIT_ACTIVATED_MASK_HEAD
     config_dictionary = {'max_itr': cfg.SOLVER.MAX_ITER, 'head_type': head_type}
 
     if resume_logdir is not None:

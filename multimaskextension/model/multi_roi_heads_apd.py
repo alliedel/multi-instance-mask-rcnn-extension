@@ -26,14 +26,6 @@ MASK_HEAD_TYPES = {
 @ROI_HEADS_REGISTRY.register()
 class MultiROIHeadsAPD(StandardROIHeads):
     """
-    It's "standard" in a sense that there is no ROI transform sharing
-    or feature sharing between tasks.
-    The cropped rois go to separate branches (boxes and masks) directly.
-    This way, it is easier to make separate abstractions for different branches.
-
-    This class is used by most models, such as FPN and C5.
-    To implement more models, you can subclass it and implement a different
-    :meth:`forward()` or a head.
     """
 
     def __init__(self, cfg, input_shape):
@@ -44,6 +36,7 @@ class MultiROIHeadsAPD(StandardROIHeads):
         self._init_box_head(cfg)
         self._init_mask_heads(cfg)
         self._init_keypoint_head(cfg)
+        self.matching_loss = cfg.MODEL.ROI_MASK_HEAD.MATCHING_LOSS
 
     def _init_mask_heads(self, cfg):
         # fmt: off
@@ -247,7 +240,8 @@ class MultiROIHeadsAPD(StandardROIHeads):
             if self.active_mask_head == 'standard':
                 return {"loss_mask": mask_rcnn_loss(mask_logits, proposals)}
             elif self.active_mask_head == 'custom':
-                return {"loss_mask": multi_mask_head_apd.multi_mask_rcnn_loss(mask_logits, proposals)}
+                return {"loss_mask": multi_mask_head_apd.multi_mask_rcnn_loss(mask_logits, proposals,
+                                                                              matching=self.matching_loss)}
         else:
             pred_boxes = [x.pred_boxes for x in instances]
             mask_features = self.mask_pooler(features, pred_boxes)

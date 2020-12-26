@@ -182,7 +182,17 @@ def download_detectron_model_to_local_zoo(relpath):
 
 
 def get_custom_maskrcnn_cfg(config_filepath=f"configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x_APD.yaml"):
-    cfg = get_maskrcnn_cfg(config_filepath)
+    cfg = get_cfg()
+    assert os.path.exists(config_filepath), f"{config_filepath} does not exist"
+    cfg.merge_from_file(config_filepath)
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
+    # Find a model from detectron2's model zoo. You can either use the https://dl.fbaipublicfiles.... url,
+    # or use the
+    # following shorthand
+    model_rel_path = 'COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl'
+    local_path = download_detectron_model_to_local_zoo(model_rel_path)
+    cfg.MODEL.WEIGHTS = local_path
+
     standard_state_file = cfg.MODEL.WEIGHTS
     ext = os.path.splitext(standard_state_file)[1]
     # Adjust state dict for multiple heads
