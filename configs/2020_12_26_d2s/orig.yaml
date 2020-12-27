@@ -12,3 +12,4 @@ DATASETS:
   TEST: ("d2s_val",)
 #cfg.MODEL.RPN.BBOX_REG_LOSS_TYPE = "smooth_l1"
 #cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = "smooth_l1"
+
