@@ -137,7 +137,8 @@ class Trainer_APD(TrainerBase):
             scheduler=self.scheduler,
         )
         self.start_iter = 0  # Will be changed if/when resume state is loaded
-        self.max_iter = cfg.SOLVER.MAX_ITER
+        self.max_iter = cfg.SOLVER.MAX_ITER if not cfg.GLOBAL.ONE_EPOCH else \
+            len(self.data_loader.dataset)  # I should divide by batch size, but not sure how itrs map with distributed
         self.cfg = cfg
 
         # event storage
@@ -184,17 +185,23 @@ class Trainer_APD(TrainerBase):
     def train(self):
         """
         Run training.
-
+        Parent calls:
+            self.before_train()
+            for self.iter in range(start_iter, max_iter):
+                self.before_step()
+                self.run_step()
+                self.after_step()
         Returns:
             OrderedDict of results, if evaluation is enabled. Otherwise None.
         """
-        super().train(self.start_iter, self.max_iter)
+        return super().train(self.start_iter, self.max_iter)
 
     def run_step(self):
         """
         Implement the standard training logic described above.
         """
-        self.run_step_with_given_data(next(self._data_loader_iter))
+        next_data = next(self._data_loader_iter)
+        self.run_step_with_given_data(next_data)
 
     def run_step_with_given_data(self, data):
         """
@@ -211,6 +218,8 @@ class Trainer_APD(TrainerBase):
         """
         If your want to do something with the losses, you can wrap the model.
         """
+        if self.cfg.GLOBAL.NOOP:
+            return
         loss_dict = self.model(data)
         losses = sum(loss for loss in loss_dict.values())
         self._detect_anomaly(losses, loss_dict)

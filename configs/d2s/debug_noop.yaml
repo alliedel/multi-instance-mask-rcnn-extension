@@ -1,0 +1,31 @@
+_BASE_: "../Base-RCNN-FPN-APD.yaml"
+MODEL:
+  DEVICE: 'cpu'
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  MASK_ON: True
+  ROI_MASK_HEAD:
+    INIT_ACTIVATED_MASK_HEAD: "custom"  # "standard", "custom"
+    N_MASKS_PER_ROI: 2  # only relevant if using the custom mask head
+    MATCHING_LOSS: False
+  ROI_HEADS:
+    NAME: "MultiROIHeadsAPD"  #  "StandardROIHeads", "MultiROIHeadsAPD"
+  RESNETS:
+    DEPTH: 50
+SOLVER:
+  IMS_PER_BATCH: 1
+  STEPS: (210000, 250000)
+  MAX_ITER: 270000
+DATASETS:
+  TRAIN: ("d2s_train",)
+  TEST: ("d2s_val",)
+#  TRAIN: ("coco_2017_debug_train",)
+#  TEST: ("coco_2017_debug_val",)
+INPUT:
+  MASK_FORMAT: polygon
+DATALOADER:
+  NUM_WORKERS: 0
+#cfg.MODEL.RPN.BBOX_REG_LOSS_TYPE = "smooth_l1"
+#cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = "smooth_l1"
+GLOBAL:
+  NOOP: True
+  ONE_EPOCH: True

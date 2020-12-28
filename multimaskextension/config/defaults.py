@@ -568,3 +568,7 @@ _C.CUDNN_BENCHMARK = False
 # Do not commit any configs into it.
 _C.GLOBAL = CN()
 _C.GLOBAL.HACK = 1.0
+
+# Added by APD
+_C.GLOBAL.NOOP = False
+_C.GLOBAL.ONE_EPOCH = False  # override and only run one epoch
