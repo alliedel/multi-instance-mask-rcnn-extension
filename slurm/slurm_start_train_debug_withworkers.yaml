@@ -2,7 +2,7 @@
 # Run this file from the root directory (one level up from here)
 
 i=0
-for file in configs/2020_12_26_d2s/*.yaml; do
+for file in configs/2020_12_26_d2s/standard.yaml; do
     i=$((i+1))
     if [ $i -gt 1 ]; then break; fi 
     echo "$file"
