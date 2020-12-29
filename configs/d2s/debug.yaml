@@ -8,7 +8,7 @@ MODEL:
     N_MASKS_PER_ROI: 2  # only relevant if using the custom mask head
     MATCHING_LOSS: False
   ROI_HEADS:
-    NAME: "MultiROIHeadsAPD"  #  "StandardROIHeads", "MultiROIHeadsAPD"
+    NAME: "StandardROIHeads"  #  "StandardROIHeads", "MultiROIHeadsAPD"
   RESNETS:
     DEPTH: 50
 SOLVER:
