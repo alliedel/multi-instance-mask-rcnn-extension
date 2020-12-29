@@ -37,6 +37,8 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
     head_type = cfg.MODEL.ROI_MASK_HEAD.INIT_ACTIVATED_MASK_HEAD \
         if cfg.MODEL.ROI_HEADS.NAME != 'StandardROIHeads' else None
     config_dictionary = {'max_itr': cfg.SOLVER.MAX_ITER, 'head_type': head_type}
+    if head_type == 'custom':
+        config_dictionary = {'match': int(cfg.MODEL.ROI_MASK_HEAD.MATCHING_LOSS)}
 
     if resume_logdir is not None:
         output_dir = resume_logdir
