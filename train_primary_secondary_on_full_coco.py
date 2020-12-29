@@ -34,7 +34,8 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
     cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath)
 
     cfg.SOLVER.MAX_ITER = 1000000
-    head_type = cfg.MODEL.ROI_MASK_HEAD.INIT_ACTIVATED_MASK_HEAD
+    head_type = cfg.MODEL.ROI_MASK_HEAD.INIT_ACTIVATED_MASK_HEAD if cfg.MODEL.ROI_HEADS.NAME == 'StandardROIHeads' \
+        else None
     config_dictionary = {'max_itr': cfg.SOLVER.MAX_ITER, 'head_type': head_type}
 
     if resume_logdir is not None:
@@ -53,8 +54,8 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
     checkpoint_resume = None if resume_logdir is None else os.path.join(resume_logdir, rel_model_pth)
     trainer = Trainer_APD(cfg, out_dir=output_dir, interval_validate=1000, n_model_checkpoints=20,
                           checkpoint_resume=checkpoint_resume)
-
-    script_utils.activate_head_type(trainer, head_type)
+    if not cfg.MODEL.ROI_HEADS.NAME == 'StandardROIHeads':
+        script_utils.activate_head_type(trainer, head_type)
 
     print('Beginning training')
     trainer.train()
