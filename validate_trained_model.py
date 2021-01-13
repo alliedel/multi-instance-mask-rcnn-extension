@@ -21,6 +21,11 @@ from multimaskextension.train import script_utils
 from multimaskextension.train.script_utils import run_inference, visualize_instancewise_predictions, prep_image
 from multimaskextension.train.trainer_apd import Trainer_APD
 
+# We do this to force the multiroiheads to be added to the registry
+from multimaskextension.model import multi_roi_heads_apd
+from multimaskextension.data import registryextension
+
+
 exporter_ = None
 
 
