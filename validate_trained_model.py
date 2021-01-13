@@ -48,13 +48,12 @@ def stochastic_train_on_set(trainer: Trainer_APD, batches, max_itr=100, start_it
             trainer.run_step_with_given_data(batches[int(t % N)])
 
 
-def main(resume, rel_cfg_path, image_ids=('306284', '486536', '9')):
+def main(resume, cfg_file, image_ids=('306284', '486536', '9')):
     exporter = vis_utils.FigExporter()
 
     print('Beginning setup...')
-    cfg_pth = os.path.join(resume, rel_cfg_path)
-    assert os.path.exists(cfg_pth), cfg_pth
-    cfg = script_utils.get_custom_maskrcnn_cfg()
+    assert os.path.exists(cfg_file), cfg_file
+    cfg = script_utils.get_custom_maskrcnn_cfg(cfg_file)
     trainer = Trainer_APD(cfg, out_dir='~/workspace', checkpoint_resume=resume)
     head_type = 'custom'
     script_utils.activate_head_type(trainer, head_type)
@@ -124,10 +123,10 @@ def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, 
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model-pth', required=False, default=None)
-    parser.add_argument('--rel-cfg-path', required=False, default=None)
+    parser.add_argument('--cfg-pth', required=False, default=None)
     return parser
 
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    main(resume=args.model_pth, rel_cfg_path=args.rel_cfg_path)
+    main(resume=args.model_pth, cfg_file=args.cfg_pth)
