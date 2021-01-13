@@ -53,7 +53,7 @@ def stochastic_train_on_set(trainer: Trainer_APD, batches, max_itr=100, start_it
             trainer.run_step_with_given_data(batches[int(t % N)])
 
 
-def main(resume, cfg_file, image_ids=('306284', '486536', '9')):
+def main(resume, cfg_file, image_ids=('D2S_029617', 'D2S_014826')):
     exporter = vis_utils.FigExporter()
 
     print('Beginning setup...')
