@@ -124,13 +124,13 @@ def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, 
     posttrain_tag = f'_posttrain_{max_iters}'
     visualize_instancewise_predictions(
         img, pred_instances, cfg, exporter, tag=f'{image_id}' + posttrain_tag + cfg_tag)
-    figure_name = image_id + cfg_tag + posttrain_tag + '_pred'
+    figure_name = f"{image_id}{cfg_tag}{posttrain_tag}_pred"
     figname = exporter.collate_previous('{:02d}'.format(exporter.fig_number) + 'c_' + figure_name,
                                         delete_individuals=True)
     dbprint('Exported', figname)
     vis_utils.visualize_instancewise_soft_predictions(
         pred_instances, exporter, tag=f'{image_id}' + posttrain_tag + cfg_tag)
-    figure_name = image_id + cfg_tag + posttrain_tag + '_pred_soft'
+    figure_name = f"{image_id}{cfg_tag}{posttrain_tag}_pred_soft"
     figname = exporter.collate_previous('{:02d}'.format(exporter.fig_number) + 'c_' + figure_name,
                                         delete_individuals=True)
     dbprint('Exported', figname)
@@ -139,14 +139,10 @@ def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, 
                                                             image_id, img, trainer.model, outputs, outputs_d[
                                                                 'proposalss'][0],
                                                             visualize_just_image=False)
-
-        figname = exporter.collate_previous(
-            '{:02d}'.format(exporter.fig_number) + 'c_' + os.path.splitext(os.path.basename(__file__))[
-                0] + '_' + image_id + cfg_tag +
-            posttrain_tag + '_pipeline', delete_individuals=True)
+        nm = f"{'{:02d}'.format(exporter.fig_number)}c_{os.path.splitext(os.path.basename(__file__))[0]}" \
+             f"_{image_id}{cfg_tag}{posttrain_tag}_pipeline"
+        figname = exporter.collate_previous(nm, delete_individuals=True)
         dbprint('Exported', figname)
-
-
 
 
 def get_parser():
