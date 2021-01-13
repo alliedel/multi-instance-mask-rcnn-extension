@@ -75,7 +75,7 @@ def main(resume, cfg_file, image_ids=None):
         assert os.path.isdir(cachedir)
         # predictor.model.training = True
         dataloader = script_utils.build_dataloader(cfg)
-        n_batches = 2
+        n_batches = 10
         image_ids = []
         for batch_i, ds in enumerate(dataloader):
             if batch_i >= n_batches:
@@ -87,6 +87,7 @@ def main(resume, cfg_file, image_ids=None):
                 if not os.path.exists(saved_input_file):
                     datapoint = d
                     torch.save(datapoint, saved_input_file)
+        print('Image ids:')
         print(image_ids)
         gc.collect()
         del dataloader
