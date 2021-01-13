@@ -8,6 +8,7 @@ depending on which one we switch between.
 
 """
 import argparse
+import gc
 
 import local_pyutils
 import os
@@ -52,8 +53,8 @@ def stochastic_train_on_set(trainer: Trainer_APD, batches, max_itr=100, start_it
             print('Image {}'.format(t % N))
             trainer.run_step_with_given_data(batches[int(t % N)])
 
-
-def main(resume, cfg_file, image_ids=('D2S_029617', 'D2S_014826')):
+# COCO: image_ids=('306284', '486536', '9')
+def main(resume, cfg_file, image_ids=None):
     exporter = vis_utils.FigExporter()
 
     print('Beginning setup...')
@@ -65,9 +66,32 @@ def main(resume, cfg_file, image_ids=('D2S_029617', 'D2S_014826')):
 
     print('Completing setup...')
     batches = []
-    for image_id in image_ids:
-        datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
-        batches.append([datapoint] if type(datapoint) is not list else datapoint)
+    if image_ids is not None:
+        for image_id in image_ids:
+            datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
+            batches.append([datapoint] if type(datapoint) is not list else datapoint)
+    else:
+        cachedir = './output/cache/input/'
+        assert os.path.isdir(cachedir)
+        # predictor.model.training = True
+        dataloader = script_utils.build_dataloader(cfg)
+        n_batches = 1
+        image_ids = []
+        for batch_i, ds in enumerate(dataloader):
+            if batch_i >= n_batches:
+                break
+            for d in ds:
+                image_id = d['image_id']
+                image_ids.append(image_id)
+                saved_input_file = os.path.join(cachedir, f"input_{image_id}.pt")
+                if not os.path.exists(saved_input_file):
+                    datapoint = d
+                    torch.save(datapoint, saved_input_file)
+            gc.collect()
+            del dataloader
+        for image_id in image_ids:
+            datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
+            batches.append([datapoint] if type(datapoint) is not list else datapoint)
 
     input_images = [prep_image(batch[0], cfg) for batch in batches]
 
