@@ -249,8 +249,8 @@ def visualize_groundtruth(cfg, datapoint, exporter, image_id):
 class FigExporter(object):
     fig_number = 1
 
-    def __init__(self):
-        self.workspace_dir = '/home/adelgior/workspace/images'
+    def __init__(self, workspace_dir='/home/adelgior/workspace/images'):
+        self.workspace_dir = workspace_dir
         self.generated_figures = []
         self.ext = '.png'
         self.num_fmt = '{:06d}'
