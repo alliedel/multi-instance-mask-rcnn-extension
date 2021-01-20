@@ -247,6 +247,7 @@ def just_inference_on_dataset(model, data_loader, outdir, stop_after_n_points=No
     Returns:
         The return value of `evaluator.evaluate()`
     """
+    cuda = next(model.parameters()).is_cuda
     num_devices = torch.distributed.get_world_size() if torch.distributed.is_initialized() else 1
     logger = logging.getLogger(__name__)
     logger.info("Start inference on {} images".format(len(data_loader)))
@@ -266,7 +267,7 @@ def just_inference_on_dataset(model, data_loader, outdir, stop_after_n_points=No
 
     inference_outdir = os.path.join(outdir, 'predictions')
     if os.path.exists(inference_outdir):
-        raise Exception('Predictions outdir {} already exists.  Please delete.')
+        raise Exception(f"Predictions outdir {inference_outdir} already exists.  Please delete.")
     os.makedirs(inference_outdir)
     with inference_context(model), torch.no_grad():
         for idx, inputs in enumerate(data_loader):
@@ -284,8 +285,8 @@ def just_inference_on_dataset(model, data_loader, outdir, stop_after_n_points=No
                 images = model.preprocess_image(inputs)
                 features = model.backbone(images.tensor)
                 proposalss, proposal_lossess = model.proposal_generator(images, features, None)
-
-            torch.cuda.synchronize()
+            if cuda:
+                torch.cuda.synchronize()
             total_compute_time += time.time() - start_compute_time
             print(idx, '/', n_points)
             if data_loader.batch_sampler.batch_size != 1:
