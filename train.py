@@ -33,7 +33,6 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
     print('Running setup...')
     cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath)
 
-    cfg.SOLVER.MAX_ITER = 1000000
     head_type = cfg.MODEL.ROI_MASK_HEAD.INIT_ACTIVATED_MASK_HEAD \
         if cfg.MODEL.ROI_HEADS.NAME != 'StandardROIHeads' else None
     config_dictionary = {'max_itr': cfg.SOLVER.MAX_ITER, 'head_type': head_type}

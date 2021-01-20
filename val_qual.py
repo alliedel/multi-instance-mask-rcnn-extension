@@ -1,11 +1,5 @@
 """
-The goal of train_two_masks_one_image is to overfit one image to two masks per box.  For the two cats - one chair
-image, this means each cat box predicts two cat masks, and the chair box predicts on chair.
-
-Step 1a: Modify multimask loss to send two different sets of weights / ground truth to the loss function
-Step 1b: Verify with multimask inference to see that the set of weights is learning the primary or secondary mask,
-depending on which one we switch between.
-
+Generates individual image predictions
 """
 import argparse
 import gc
@@ -54,7 +48,9 @@ def stochastic_train_on_set(trainer: Trainer_APD, batches, max_itr=100, start_it
             trainer.run_step_with_given_data(batches[int(t % N)])
 
 # COCO: image_ids=('306284', '486536', '9')
-def main(resume, cfg_file, image_ids=None):
+def main(resume, cfg_file, image_ids=None, split='train'):
+    if resume is None:
+        print('Warning: no model is being loaded. For debug validation only.')
     exporter = vis_utils.FigExporter()
 
     print('Beginning setup...')
@@ -150,7 +146,8 @@ def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, 
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model-pth', required=False, default=None)
-    parser.add_argument('--cfg-pth', required=False, default=None)
+    parser.add_argument('--cfg-pth', required=True, default=None)
+    parser.add_argument('--split', required=False, default='val', type=str)
     return parser
 
 
