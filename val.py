@@ -33,9 +33,9 @@ def dbprint(*args, **kwargs):
 
 
 def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=None):
-    assert os.path.exists(trained_logdir)
+    assert os.path.exists(trained_logdir), trained_logdir
     config_filepath = config_filepath or os.path.join(trained_logdir, 'config.yaml')
-    assert os.path.exists(config_filepath)
+    assert os.path.exists(config_filepath), config_filepath
 
     # I. Load pre-existing Mask R-CNN model
     # a. Get example image to work with
