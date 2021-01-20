@@ -47,6 +47,7 @@ def stochastic_train_on_set(trainer: Trainer_APD, batches, max_itr=100, start_it
             print('Image {}'.format(t % N))
             trainer.run_step_with_given_data(batches[int(t % N)])
 
+
 # COCO: image_ids=('306284', '486536', '9')
 def main(resume, cfg_file, image_ids=None, split='train'):
     if resume is None:
@@ -56,7 +57,7 @@ def main(resume, cfg_file, image_ids=None, split='train'):
     print('Beginning setup...')
     assert os.path.exists(cfg_file), cfg_file
     cfg = script_utils.get_custom_maskrcnn_cfg(cfg_file)
-    trainer = Trainer_APD(cfg, out_dir='~/workspace', checkpoint_resume=resume)
+    trainer = Trainer_APD(cfg, out_dir=os.path.expanduser('~/workspace'), checkpoint_resume=resume)
     head_type = 'custom'
     script_utils.activate_head_type(trainer, head_type)
 
