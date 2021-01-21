@@ -17,8 +17,6 @@ from detectron2.evaluation import (
 # DETECTRON2_REPO = '/home/adelgior/code/multi-instance-mask-rcnn-extension/detectron2_repo/'
 # if not DETECTRON2_REPO in sys.path:
 #     sys.path.append(DETECTRON2_REPO)
-# print(sys.path)
-<<<<<<< HEAD
 from multimaskextension.train.script_utils import just_inference_on_dataset, get_image_identifiers
 from multimaskextension.train import script_utils
 from detectron2.engine import DefaultTrainer
