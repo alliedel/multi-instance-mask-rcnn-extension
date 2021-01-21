@@ -19,6 +19,7 @@ from detectron2.data import MetadataCatalog
 #     sys.path.append(DETECTRON2_REPO)
 # print(sys.path)
 
+from multimaskextension.train.script_utils import just_inference_on_dataset, get_image_identifiers
 from multimaskextension.analysis.vis_utils import cv2_imshow, FigExporter
 from multimaskextension.train import script_utils
 from detectron2.engine import DefaultPredictor
@@ -39,15 +40,15 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
 
     # I. Load pre-existing Mask R-CNN model
     # a. Get example image to work with
-    dataset_dir = "/home/allie/data/datasets/d2s"
-    assert os.path.exists(dataset_dir)
-    impath = f"{dataset_dir}/images/D2S_99001144.jpg"
-    assert os.path.exists(impath), impath
-    im = cv2.imread(impath)
-    cv2_imshow(im)
-    exporter = FigExporter()
-    exporter.workspace_dir = '/home/allie/workspace/images'
-    exporter.export_gcf('input')
+#    dataset_dir = "/home/allie/data/datasets/d2s"
+#    assert os.path.exists(dataset_dir), dataset_dir
+#    impath = f"{dataset_dir}/images/D2S_99001144.jpg"
+#    assert os.path.exists(impath), impath
+#    im = cv2.imread(impath)
+#    cv2_imshow(im)
+#    exporter = FigExporter()
+#    exporter.workspace_dir = '/home/allie/workspace/images'
+#    exporter.export_gcf('input')
 
     # b. Load model
     cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath)
@@ -56,18 +57,18 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     predictor = DefaultPredictor(cfg)
 
     # c. Get predictions and print boxes
-    outputs = predictor(im)
+#    outputs = predictor(im)
 
-    print(outputs)
+#    print(outputs)
 
-    pprint(outputs["instances"].pred_classes)
-    pprint(outputs["instances"].pred_boxes)
+#    pprint(outputs["instances"].pred_classes)
+#    pprint(outputs["instances"].pred_boxes)
 
     # d. Visualize and export predictions
-    v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
-    v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-    cv2_imshow(v.get_image()[:, :, ::-1])
-    exporter.export_gcf('prediction')
+#    v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
+#    v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+#    cv2_imshow(v.get_image()[:, :, ::-1])
+#    exporter.export_gcf('prediction')
 
     # e. Load full dataset
 
@@ -98,7 +99,6 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     # g. Run Mask R-CNN predictions on all COCO images
     # for each image in training set
 
-    from multimaskextension.train.script_utils import just_inference_on_dataset, get_image_identifiers
 
     outdir = os.path.join('output', 'test', os.path.basename(trained_logdir.strip(os.path.sep)))
     if not os.path.exists(outdir):
