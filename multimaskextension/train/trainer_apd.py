@@ -351,7 +351,7 @@ class Trainer_APD(TrainerBase):
         for idx, dataset_name in enumerate(cfg.DATASETS.TEST):
             data_loader = cls.build_test_loader(cfg, dataset_name)
             # When evaluators are passed in as arguments,
-            # implicitly assume that dataset_nameevaluators can be created before data_loader.
+            # implicitly assume that evaluators can be created before data_loader.
             evaluator = (
                 evaluators[idx]
                 if evaluators is not None
