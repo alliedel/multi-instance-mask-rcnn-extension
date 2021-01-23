@@ -10,7 +10,7 @@ source ~/.bashrc
 #export CUDA_VISIBLE_DEVICES=$gpus
 activate_virtualenv pytorch4
 echo "CUDA_VISIBLE_DEVICES: $CUDA_VISIBLE_DEVICES"
-cmd="python train_primary_secondary_on_full_coco.py $@"
+cmd="python train.py $@"
 echo "$cmd"
 
 $cmd
