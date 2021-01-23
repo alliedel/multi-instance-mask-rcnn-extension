@@ -1,0 +1,2 @@
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2020-12-28-225457_VCS-daaf4a9_MAX_ITR-1000000_HEAD_TYPE-custom/
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2020-12-28-225532_VCS-daaf4a9_MAX_ITR-1000000_HEAD_TYPE-None/
