@@ -1,5 +1,6 @@
 import argparse
 import os
+import torch
 
 import detectron2.utils.comm as comm
 from detectron2.data import MetadataCatalog
