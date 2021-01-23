@@ -1,6 +1,7 @@
 import argparse
 import os
 
+from multimaskextension.train import script_utils
 import detectron2.utils.comm as comm
 from detectron2.data import MetadataCatalog
 from detectron2.evaluation import (
@@ -20,7 +21,6 @@ from detectron2.evaluation import (
 # print(sys.path)
 import torch
 
-from multimaskextension.train import script_utils
 from detectron2.engine import DefaultTrainer
 from detectron2.engine import DefaultPredictor
 
@@ -34,7 +34,7 @@ def dbprint(*args, **kwargs):
     print(*args, **kwargs)
 
 
-def build_evaluator(cfg, dataset_name, output_folder=None):
+def build_evaluator(cfg, dataset_name, output_folder=None, distributed=True):
     """
     Create evaluator(s) for a given dataset.
     This uses the special metadata "evaluator_type" associated with each builtin dataset.
@@ -56,7 +56,7 @@ def build_evaluator(cfg, dataset_name, output_folder=None):
             )
         )
     if evaluator_type in ["coco", "coco_panoptic_seg"]:
-        evaluator_list.append(COCOEvaluator(dataset_name, cfg, True, output_folder))
+        evaluator_list.append(COCOEvaluator(dataset_name, cfg, distributed, output_folder))
     if evaluator_type == "coco_panoptic_seg":
         evaluator_list.append(COCOPanopticEvaluator(dataset_name, output_folder))
     if evaluator_type == "cityscapes":
@@ -114,7 +114,8 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     outdir = os.path.join('output', 'test', os.path.basename(trained_logdir.strip(os.path.sep)))
     if not os.path.exists(outdir):
         os.makedirs(outdir)
-    evaluators = build_evaluator(cfg, dataset_name=cfg.DATASETS.TEST[0], output_folder=outdir)
+    evaluators = build_evaluator(cfg, dataset_name=cfg.DATASETS.TEST[0], output_folder=outdir, distributed=False)
+    print('Testing')
     Trainer_APD.test(cfg, predictor.model, evaluators)
 
     for split, data_loader in dataloaders.items():
