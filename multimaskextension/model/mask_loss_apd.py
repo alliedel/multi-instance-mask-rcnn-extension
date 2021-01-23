@@ -29,34 +29,38 @@ def solve_matching_problem(cost_tensor: torch.Tensor):
 
 def get_matching_xent_losses(instances, pred_mask_logits, n_masks_per_roi):
     n_images = len(instances)
-    assert n_images == 1, NotImplementedError('Only handles batch size = 1 at the moment')
+    pred_masks_per_img = []
+    inst_count = 0
+    for i in range(n_images):
+        n_instances = len(instances[i])
+        pred_masks_per_img.append(pred_mask_logits[inst_count:(inst_count + n_instances)])
+        inst_count += n_instances
+    losses_per_img = [get_matching_xent_losses_single_img(inst, n_masks_per_roi, pred_masks) for
+                      inst, pred_masks in zip(instances, pred_masks_per_img)]
+    losses = torch.stack(losses_per_img, dim=1)
+    return losses.sum(dim=1)  # sum over images
 
+
+def get_matching_xent_losses_single_img(instances, n_masks_per_roi, pred_mask_logits):
     mask_side_len = pred_mask_logits.size(2)
-
-    instances_per_image = instances[0]
-
+    instances_per_image = instances
     gt_1 = instances_per_image.gt_masks.crop_and_resize(
         instances_per_image.proposal_boxes.tensor, mask_side_len).to(device=pred_mask_logits.device)
     gt_2 = instances_per_image.gt_second_best_masks.crop_and_resize(
         instances_per_image.proposal_boxes.tensor, mask_side_len).to(device=pred_mask_logits.device)
-
     gt_pairs = [torch.stack([g1, g2]) for g1, g2 in zip(gt_1, gt_2)]
-
     gt_classes = instances_per_image.gt_classes.to(dtype=torch.int64)
-
     pred_mask_pairs = [[p[i::n_masks_per_roi, :, :][gt_class] for i in range(n_masks_per_roi)] for p, gt_class in
                        zip(pred_mask_logits, gt_classes)]
-
     for idx, (gt_pair, pred_pair) in enumerate(zip(gt_pairs, pred_mask_pairs)):
         xent_losses = torch.zeros((len(gt_pair), len(pred_pair)), device=pred_mask_logits.device)
         for i, pred in enumerate(pred_pair):
             for j, gt in enumerate(gt_pair):
                 xent_losses[i, j] = F.binary_cross_entropy_with_logits(
                     pred, gt.to(dtype=torch.float32), reduction='mean')
-
     match_cols = solve_matching_problem(xent_losses)
-
-    return xent_losses[torch.arange(xent_losses.shape[0], device=xent_losses.device), match_cols]
+    losses = xent_losses[torch.arange(xent_losses.shape[0], device=xent_losses.device), match_cols]
+    return losses
 
 
 def maskwise_mask_rcnn_loss(pred_mask_logits, instances, gt_masks_raw: List[PolygonMasks]):
