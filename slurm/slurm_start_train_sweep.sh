@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this file from the root directory (one level up from here)
 
-for file in ./configs/2020_12_26_d2s/*.yaml; do
+for file in ./configs/2021_01_23_d2s/*.yaml; do
     echo "$file"
     noparent="${file##*/}"
     basenm="${noparent%.yaml}"
