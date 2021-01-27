@@ -46,7 +46,7 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
         with open(config_outpath, "w") as f:
             f.write(cfg.dump())
     else:
-        output_dir = local_pyutils.get_log_dir('output/logs/train/train_',
+        output_dir = local_pyutils.get_log_dir('output/logs/train/train',
                                                config_dictionary=config_dictionary)
         config_outpath = os.path.join(output_dir, "config.yaml")
     with open(config_outpath, "w") as f:
