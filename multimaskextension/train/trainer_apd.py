@@ -187,7 +187,7 @@ class Trainer_APD(TrainerBase):
             elif key == 'iteration':
                 self.start_iter = value
                 self.iter = value
-            elif key == 'model_state_dict':
+            elif key == 'model_state_dict' or key == 'model':
                 self.model.load_state_dict(value)
             elif key == 'optim_state_dict':
                 self.optimizer.load_state_dict(value)

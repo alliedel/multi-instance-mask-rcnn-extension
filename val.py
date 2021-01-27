@@ -17,7 +17,6 @@ from detectron2.evaluation import (
 )
 
 from detectron2.engine import DefaultTrainer
-from detectron2.engine import DefaultPredictor
 
 # Don't know how to avoid importing this
 from multimaskextension.model import multi_roi_heads_apd
@@ -86,12 +85,13 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath, weights_checkpoint=checkpoint_resume)
     if cpu:
         cfg.MODEL.DEVICE = 'cpu'
-    predictor = DefaultPredictor(cfg)
+
+    model = Trainer_APD.build_model(cfg)
 
     print('Loading state dict')
     state = torch.load(checkpoint_resume, map_location=torch.device('cpu')) if cpu \
         else torch.load(checkpoint_resume)
-    predictor.model.load_state_dict(state['model_state_dict'])
+    model.load_state_dict(state['model_state_dict'])
 
     # e. Load full dataset
     print('CFG: ')
@@ -113,7 +113,7 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
         os.makedirs(outdir)
     evaluators = build_evaluator(cfg, dataset_name=cfg.DATASETS.TEST[0], output_folder=outdir, distributed=False)
     print('Testing')
-    Trainer_APD.test(cfg, predictor.model, evaluators)
+    Trainer_APD.test(cfg, model, evaluators)
 
     for split, data_loader in dataloaders.items():
         n_points = None  # Set to 10 or so for debugging
@@ -121,7 +121,7 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
         if os.path.exists(pred_dir) and not overwrite_preds:
             print(f"{pred_dir} already exists. Skipping inference.")
         else:
-            script_utils.just_inference_on_dataset(predictor.model, data_loader, outdir, n_points)
+            script_utils.just_inference_on_dataset(model, data_loader, outdir, n_points)
 
     # Write file list to path
     filelists = {s: os.path.join(outdir, 'filelist_{}.txt'.format(s))
