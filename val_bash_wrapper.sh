@@ -10,7 +10,7 @@ source ~/.bashrc
 #export CUDA_VISIBLE_DEVICES=$gpus
 activate_virtualenv pytorch4
 echo "CUDA_VISIBLE_DEVICES: $CUDA_VISIBLE_DEVICES"
-cmd="python validate_trained_model.py $@"
+cmd="python val.py $@"
 echo "$cmd"
 
 $cmd
