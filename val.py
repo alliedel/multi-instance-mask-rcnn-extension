@@ -22,6 +22,7 @@ from detectron2.engine import DefaultTrainer
 from multimaskextension.model import multi_roi_heads_apd
 from multimaskextension.data import registryextension
 from multimaskextension.train.trainer_apd import Trainer_APD
+from multimaskextension.analysis.evaluator import MultiMaskCOCOEvaluator
 
 
 def dbprint(*args, **kwargs):
@@ -29,52 +30,14 @@ def dbprint(*args, **kwargs):
 
 
 def build_evaluator(cfg, dataset_name, output_folder=None, distributed=True):
-    """
-    Create evaluator(s) for a given dataset.
-    This uses the special metadata "evaluator_type" associated with each builtin dataset.
-    For your own dataset, you can simply create an evaluator manually in your
-    script and do not have to worry about the hacky if-else logic here.
-    """
     if output_folder is None:
         output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
-    evaluator_list = []
-    evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
-    if evaluator_type in ["sem_seg", "coco_panoptic_seg"]:
-        evaluator_list.append(
-            SemSegEvaluator(
-                dataset_name,
-                distributed=True,
-                num_classes=cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
-                ignore_label=cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
-                output_dir=output_folder,
-            )
-        )
-    if evaluator_type in ["coco", "coco_panoptic_seg"]:
-        evaluator_list.append(COCOEvaluator(dataset_name, cfg, distributed, output_folder))
-    if evaluator_type == "coco_panoptic_seg":
-        evaluator_list.append(COCOPanopticEvaluator(dataset_name, output_folder))
-    if evaluator_type == "cityscapes":
-        assert (
-            torch.cuda.device_count() >= comm.get_rank()
-        ), "CityscapesEvaluator currently do not work with multiple machines."
-        return CityscapesEvaluator(dataset_name)
-    if evaluator_type == "pascal_voc":
-        return PascalVOCDetectionEvaluator(dataset_name)
-    if evaluator_type == "lvis":
-        return LVISEvaluator(dataset_name, cfg, True, output_folder)
-    if len(evaluator_list) == 0:
-        raise NotImplementedError(
-            "no Evaluator for the dataset {} with the type {}".format(
-                dataset_name, evaluator_type
-            )
-        )
-    if len(evaluator_list) == 1:
-        return evaluator_list[0]
-    return DatasetEvaluators(evaluator_list)
+    evaluator = MultiMaskCOCOEvaluator(dataset_name, cfg, distributed, output_folder)
+    return evaluator
 
 
 def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=None,
-         overwrite_preds=False, cpu=False):
+         overwrite_preds=False, cpu=False, val_dataset=None):
     assert os.path.exists(trained_logdir), trained_logdir
     config_filepath = config_filepath or os.path.join(trained_logdir, 'config.yaml')
     assert os.path.exists(config_filepath), config_filepath
@@ -85,6 +48,8 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath, weights_checkpoint=checkpoint_resume)
     if cpu:
         cfg.MODEL.DEVICE = 'cpu'
+    if val_dataset is not None:
+        cfg.DATASETS.TEST = val_dataset
 
     model = Trainer_APD.build_model(cfg)
 
@@ -145,6 +110,8 @@ def get_parser():
     parser.add_argument('--trained-logdir', required=True)
     parser.add_argument('--overwrite-preds', required=False, default=None)
     parser.add_argument('--rel-model-pth', required=False, default='checkpoint.pth.tar')
+    parser.add_argument('--val-dataset', required=False, default=None, help='Default: The dataset specified in '
+                                                                            'cfg.DATASETS.TEST')
     parser.add_argument('--config-filepath', required=False, default=None,
                         help='Will assume {logdir}/config.yaml')
     parser.add_argument('--cpu', default=False, action='store_true')
