@@ -49,6 +49,8 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     if cpu:
         cfg.MODEL.DEVICE = 'cpu'
     if val_dataset is not None:
+        if type(val_dataset) is str:
+            val_dataset = [val_dataset]
         cfg.DATASETS.TEST = val_dataset
 
     model = Trainer_APD.build_model(cfg)
@@ -110,8 +112,9 @@ def get_parser():
     parser.add_argument('--trained-logdir', required=True)
     parser.add_argument('--overwrite-preds', required=False, default=None)
     parser.add_argument('--rel-model-pth', required=False, default='checkpoint.pth.tar')
-    parser.add_argument('--val-dataset', required=False, default=None, help='Default: The dataset specified in '
-                                                                            'cfg.DATASETS.TEST')
+    parser.add_argument('--val-dataset', required=False, default=None, type=lambda arg: arg.split(','),
+                        help='Give comma-separated list of validation datasets.  Default: The dataset specified in '
+                             'cfg.DATASETS.TEST')
     parser.add_argument('--config-filepath', required=False, default=None,
                         help='Will assume {logdir}/config.yaml')
     parser.add_argument('--cpu', default=False, action='store_true')
