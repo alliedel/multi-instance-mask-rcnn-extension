@@ -80,13 +80,14 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     config_filepath = config_filepath or os.path.join(trained_logdir, 'config.yaml')
     assert os.path.exists(config_filepath), config_filepath
 
+    checkpoint_resume = os.path.join(trained_logdir, rel_model_pth)
+
     # I. Load pre-existing Mask R-CNN model
-    cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath)
+    cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath, weights_file=checkpoint_resume)
     if cpu:
         cfg.MODEL.DEVICE = 'cpu'
     predictor = DefaultPredictor(cfg)
 
-    checkpoint_resume = os.path.join(trained_logdir, rel_model_pth)
     print('Loading state dict')
     state = torch.load(checkpoint_resume, map_location=torch.device('cpu')) if cpu \
         else torch.load(checkpoint_resume)
