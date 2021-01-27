@@ -83,7 +83,7 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     checkpoint_resume = os.path.join(trained_logdir, rel_model_pth)
 
     # I. Load pre-existing Mask R-CNN model
-    cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath, weights_file=checkpoint_resume)
+    cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath, weights_checkpoint=checkpoint_resume)
     if cpu:
         cfg.MODEL.DEVICE = 'cpu'
     predictor = DefaultPredictor(cfg)

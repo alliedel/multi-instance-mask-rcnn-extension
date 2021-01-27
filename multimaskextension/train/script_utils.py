@@ -182,7 +182,7 @@ def download_detectron_model_to_local_zoo(relpath):
 
 
 def get_custom_maskrcnn_cfg(config_filepath=f"configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x_APD.yaml",
-                            weights_file=None):
+                            weights_checkpoint=None):
     cfg = get_cfg()
     assert os.path.exists(config_filepath), f"{config_filepath} does not exist"
     cfg.merge_from_file(config_filepath)
@@ -190,29 +190,29 @@ def get_custom_maskrcnn_cfg(config_filepath=f"configs/COCO-InstanceSegmentation/
     # Find a model from detectron2's model zoo. You can either use the https://dl.fbaipublicfiles.... url,
     # or use the
     # following shorthand
-    if weights_file is None:
+    # Adjust state dict for multiple heads
+    if weights_checkpoint is None:  # only do this if running initialization (from a standard head file)
         model_rel_path = 'COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl'
         local_path = download_detectron_model_to_local_zoo(model_rel_path)
         cfg.MODEL.WEIGHTS = local_path
-    else:
-        cfg.MODEL.WEIGHTS = weights_file
-    standard_state_file = cfg.MODEL.WEIGHTS
-    ext = os.path.splitext(standard_state_file)[1]
-    # Adjust state dict for multiple heads
-    if cfg.MODEL.ROI_HEADS.NAME == "MultiROIHeadsAPD":
-        multihead_state_file = standard_state_file.replace(f'{ext}', f'_multiheads_apd{ext}')
-        if not os.path.exists(multihead_state_file):
-            make_multihead_state_from_single_head_state(standard_state_file, multihead_state_file)
-        custom_state_file = multihead_state_file
-    else:
-        custom_state_file = standard_state_file
+        standard_state_file = cfg.MODEL.WEIGHTS
+        ext = os.path.splitext(standard_state_file)[1]
+        if cfg.MODEL.ROI_HEADS.NAME == "MultiROIHeadsAPD":
+            multihead_state_file = standard_state_file.replace(f'{ext}', f'_multiheads_apd{ext}')
+            if not os.path.exists(multihead_state_file):
+                make_multihead_state_from_single_head_state(standard_state_file, multihead_state_file)
+            custom_state_file = multihead_state_file
+        else:
+            custom_state_file = standard_state_file
 
-    # Adjust state dict for multiple masks
-    if cfg.MODEL.ROI_MASK_HEAD.N_MASKS_PER_ROI != 1:
-        multimask_state_file = custom_state_file.replace(f'{ext}', f'_multiheads_apd{ext}')
-        if not os.path.exists(multimask_state_file):
-            copy_singlemask_multihead_to_multimask_multihead(custom_state_file, multimask_state_file)
-        custom_state_file = multimask_state_file
+        # Adjust state dict for multiple masks
+        if cfg.MODEL.ROI_MASK_HEAD.N_MASKS_PER_ROI != 1:
+            multimask_state_file = custom_state_file.replace(f'{ext}', f'_multiheads_apd{ext}')
+            if not os.path.exists(multimask_state_file):
+                copy_singlemask_multihead_to_multimask_multihead(custom_state_file, multimask_state_file)
+            custom_state_file = multimask_state_file
+    else:
+        custom_state_file = weights_checkpoint
     cfg.MODEL.WEIGHTS = custom_state_file
     return cfg
 
