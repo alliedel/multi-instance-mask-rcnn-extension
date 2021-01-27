@@ -5,7 +5,7 @@ i=0
 
 while IFS= read -r line; do
     i=$((i+1))
-    if [ $i -gt 1 ]; then break; fi 
+    if [ $i -eq 1 ]; then continue; fi 
     echo "$line"  # Name of training output directory
     cfgpth="${line}/config.yaml"
     modelpth=""#"${line}/checkpoint.pth.tar"
