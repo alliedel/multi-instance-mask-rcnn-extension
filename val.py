@@ -142,7 +142,7 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--trained-logdir', required=True, default=None)
+    parser.add_argument('--trained-logdir', required=True)
     parser.add_argument('--overwrite-preds', required=False, default=None)
     parser.add_argument('--rel-model-pth', required=False, default='checkpoint.pth.tar')
     parser.add_argument('--config-filepath', required=False, default=None,
