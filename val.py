@@ -84,7 +84,8 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     print('Number of training images: ', len(dataloaders['train']))
     print('Number of validation images: ', len(dataloaders['val']))
 
-    outdir = os.path.join('output', 'test', os.path.basename(trained_logdir.strip(os.path.sep)))
+    outdir = os.path.join('output', 'logs', 'test', os.path.basename(trained_logdir.strip(os.path.sep)),
+                          cfg.DATASETS.TEST[0])
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     evaluators = build_evaluator(cfg, dataset_name=cfg.DATASETS.TEST[0], output_folder=outdir, distributed=False)
