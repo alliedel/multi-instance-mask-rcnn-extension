@@ -97,7 +97,7 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     with open(fname.replace('.pkl', '.txt'), 'w') as f:
         # for dataset_name, results_dic in results.items():
         #     f.write('-- Test dataset: {}'.format(dataset_name))
-        for task, res in results_dic.items():
+        for task, res in results.items():
             # Don't print "AP-category" metrics since they are usually not tracked.
             important_res = [(k, v) for k, v in res.items() if "-" not in k]
             f.write("copypaste: Task: {}".format(task))
