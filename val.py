@@ -31,9 +31,17 @@ def dbprint(*args, **kwargs):
 
 def build_evaluator(cfg, dataset_name, output_folder=None, distributed=True):
     if output_folder is None:
-        output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
-    evaluator = MultiMaskCOCOEvaluator(dataset_name, cfg, distributed, output_folder)
-    return evaluator
+        output_folder = os.path.join(cfg.OUTPUT_DIR, f"inference_{cfg.DATASETS.TEST}")
+    # default inference name
+    evaluators = [MultiMaskCOCOEvaluator(dataset_name, cfg, distributed, output_folder, mask_names=('pred_masks',))]
+    if cfg.MODEL.ROI_MASK_HEAD.MATCHING_LOSS:
+        evaluators.append(MultiMaskCOCOEvaluator(dataset_name, cfg, distributed, output_folder,
+                                                 mask_name='pred_masks1'))
+    evaluators.append(MultiMaskCOCOEvaluator(dataset_name, cfg, distributed, output_folder,
+                                             mask_name='pred_masks2'))
+    if len(evaluators) == 1:
+        return evaluators[0]
+    return evaluators
 
 
 def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=None,
