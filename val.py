@@ -46,7 +46,7 @@ def build_evaluator(cfg, dataset_name, output_folder=None, distributed=True):
 
 
 def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=None,
-         overwrite_preds=False, cpu=False, val_dataset=None):
+         overwrite_preds=False, cpu=False, val_dataset=None, save_all_predictions=False):
     assert os.path.exists(trained_logdir), trained_logdir
     config_filepath = config_filepath or os.path.join(trained_logdir, 'config.yaml')
     assert os.path.exists(config_filepath), config_filepath
@@ -91,6 +91,7 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     print('Testing')
     results = Trainer_APD.test(cfg, model, evaluators)
     fname = os.path.join(outdir, 'results.pkl')
+    print('Check results at (and its variants):\n{}'.format(fname))
     pickle.dump(results, open(fname, 'wb'))
     json.dump(results, open(fname.replace('.pkl', '.json'), 'w'))
     with open(fname.replace('.pkl', '.txt'), 'w') as f:
@@ -103,29 +104,30 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
                 f.write("copypaste: " + ",".join([k[0] for k in important_res]))
                 f.write("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
 
-    for split, data_loader in dataloaders.items():
-        n_points = None  # Set to 10 or so for debugging
-        pred_dir = os.path.join(outdir, f"predictions_{cfg.DATASETS.TEST}")
-        if os.path.exists(pred_dir) and not overwrite_preds:
-            print(f"{pred_dir} already exists. Skipping inference.")
-        else:
-            script_utils.just_inference_on_dataset(model, data_loader, outdir, n_points)
+    if save_all_predictions:
+        for split, data_loader in dataloaders.items():
+            n_points = None  # Set to 10 or so for debugging
+            pred_dir = os.path.join(outdir, f"predictions_{cfg.DATASETS.TEST}")
+            if os.path.exists(pred_dir) and not overwrite_preds:
+                print(f"{pred_dir} already exists. Skipping inference.")
+            else:
+                script_utils.just_inference_on_dataset(model, data_loader, outdir, n_points)
 
-    # Write file list to path
-    filelists = {s: os.path.join(outdir, 'filelist_{}.txt'.format(s))
-                 for s in ('train', 'val')}
+        # Write file list to path
+        filelists = {s: os.path.join(outdir, 'filelist_{}.txt'.format(s))
+                     for s in ('train', 'val')}
 
-    for s in ('val', 'train'):
-        if not os.path.exists(filelists[s]):  # generate filelist
-            identifiers = script_utils.get_image_identifiers(dataloaders[s],
-                                                             identifier_strings=('file_name', 'image_id'))
-            list_of_files = [idnt['file_name'] for idnt in identifiers]
-            with open(filelists[s], 'w') as fid:
-                fid.write('\n'.join(list_of_files))
-                fid.write('\n')
-                print('Wrote list of {} files to {}'.format(len(list_of_files), filelists[s]))
-        else:
-            print('File list already exists at {}'.format(filelists[s]))
+        for s in ('val', 'train'):
+            if not os.path.exists(filelists[s]):  # generate filelist
+                identifiers = script_utils.get_image_identifiers(dataloaders[s],
+                                                                 identifier_strings=('file_name', 'image_id'))
+                list_of_files = [idnt['file_name'] for idnt in identifiers]
+                with open(filelists[s], 'w') as fid:
+                    fid.write('\n'.join(list_of_files))
+                    fid.write('\n')
+                    print('Wrote list of {} files to {}'.format(len(list_of_files), filelists[s]))
+            else:
+                print('File list already exists at {}'.format(filelists[s]))
 
 
 def get_parser():
@@ -139,6 +141,7 @@ def get_parser():
     parser.add_argument('--config-filepath', required=False, default=None,
                         help='Will assume {logdir}/config.yaml')
     parser.add_argument('--cpu', default=False, action='store_true')
+    parser.add_argument('--save-all-predictions', default=False, action='store_true')
     return parser
 
 
