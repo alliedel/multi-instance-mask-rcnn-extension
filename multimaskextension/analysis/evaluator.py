@@ -88,6 +88,7 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
     def evaluate(self):
         all_results = OrderedDict()
         for mask_name, predictions in self._predictions_per_mask_type.items():
+            print(f"Mask name: {mask_name}")
             self._predictions = predictions
             if self._distributed:
                 comm.synchronize()
