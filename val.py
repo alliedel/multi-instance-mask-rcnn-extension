@@ -90,10 +90,12 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     evaluators = build_evaluator(cfg, dataset_name=cfg.DATASETS.TEST[0], output_folder=outdir, distributed=False)
     print('Testing')
     results = Trainer_APD.test(cfg, model, evaluators)
-    pickle.dump(results, open(os.path.join(outdir, 'results.pkl'), 'w'))
-    json.dump(results, open(os.path.join(outdir, 'results.json'), 'w'))
-    with open(os.path.join(outdir, 'results.txt'), 'w') as f:
+    fname = os.path.join(outdir, 'results.pkl')
+    pickle.dump(results, open(fname, 'wb'))
+    json.dump(results, open(fname.replace('.pkl', '.json'), 'w'))
+    with open(fname.replace('.pkl', '.txt'), 'w') as f:
         for dataset_name, results_dic in results.keys():
+            f.write('-- Test dataset: {}'.format(dataset_name))
             for task, res in results_dic.items():
                 # Don't print "AP-category" metrics since they are usually not tracked.
                 important_res = [(k, v) for k, v in res.items() if "-" not in k]
