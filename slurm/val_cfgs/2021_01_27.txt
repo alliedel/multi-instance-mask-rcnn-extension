@@ -1,3 +1,7 @@
 /home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-0
 /home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-1
 /home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MAX_ITR-270000_HEAD_TYPE-None
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-0 --val-dataset d2s_val_wo_occlusion
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-0 --val-dataset d2s_val_occlusion
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-0 --val-dataset d2s_val_clutter
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-0 --val-dataset d2s_train
