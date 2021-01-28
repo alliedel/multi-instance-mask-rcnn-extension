@@ -2,18 +2,28 @@
 Example of an evaluator (from DensePose) -- should be implemented by the MultiMask class
 """
 
+import contextlib
 import copy
+import io
 import itertools
+import json
+import logging
 import os
+import pickle
 from collections import OrderedDict
 
 import detectron2.utils.comm as comm
 import numpy as np
 import pycocotools.mask as mask_util
 import torch
+from detectron2.data import MetadataCatalog
 from detectron2.evaluation.coco_evaluation import COCOEvaluator
-from detectron2.structures import BoxMode
+from detectron2.structures import Boxes, BoxMode, pairwise_iou
+from detectron2.utils.logger import create_small_table
 from fvcore.common.file_io import PathManager
+from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
+from tabulate import tabulate
 
 
 class MultiMaskCOCOEvaluator(COCOEvaluator):
