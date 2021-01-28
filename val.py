@@ -95,7 +95,7 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     pickle.dump(results, open(fname, 'wb'))
     json.dump(results, open(fname.replace('.pkl', '.json'), 'w'))
     with open(fname.replace('.pkl', '.txt'), 'w') as f:
-        for dataset_name, results_dic in results.keys():
+        for dataset_name, results_dic in results.items():
             f.write('-- Test dataset: {}'.format(dataset_name))
             for task, res in results_dic.items():
                 # Don't print "AP-category" metrics since they are usually not tracked.
