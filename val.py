@@ -1,6 +1,7 @@
 import argparse
 import os
 import torch
+import json
 
 from multimaskextension.train import script_utils
 import detectron2.utils.comm as comm
@@ -23,6 +24,7 @@ from multimaskextension.model import multi_roi_heads_apd
 from multimaskextension.data import registryextension
 from multimaskextension.train.trainer_apd import Trainer_APD
 from multimaskextension.analysis.evaluator import MultiMaskCOCOEvaluator
+import pickle
 
 
 def dbprint(*args, **kwargs):
@@ -87,11 +89,21 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
         os.makedirs(outdir)
     evaluators = build_evaluator(cfg, dataset_name=cfg.DATASETS.TEST[0], output_folder=outdir, distributed=False)
     print('Testing')
-    Trainer_APD.test(cfg, model, evaluators)
+    results = Trainer_APD.test(cfg, model, evaluators)
+    pickle.dump(results, open(os.path.join(outdir, 'results.pkl'), 'w'))
+    json.dump(results, open(os.path.join(outdir, 'results.json'), 'w'))
+    with open(os.path.join(outdir, 'results.txt'), 'w') as f:
+        for dataset_name, results_dic in results.keys():
+            for task, res in results_dic.items():
+                # Don't print "AP-category" metrics since they are usually not tracked.
+                important_res = [(k, v) for k, v in res.items() if "-" not in k]
+                f.write("copypaste: Task: {}".format(task))
+                f.write("copypaste: " + ",".join([k[0] for k in important_res]))
+                f.write("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
 
     for split, data_loader in dataloaders.items():
         n_points = None  # Set to 10 or so for debugging
-        pred_dir = os.path.join(outdir, 'predictions')
+        pred_dir = os.path.join(outdir, f"predictions_{cfg.DATASETS.TEST}")
         if os.path.exists(pred_dir) and not overwrite_preds:
             print(f"{pred_dir} already exists. Skipping inference.")
         else:
