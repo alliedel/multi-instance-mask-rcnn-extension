@@ -88,6 +88,7 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
                 self._predictions_per_mask_type[mask_name].append(prediction)
 
     def evaluate(self):
+        all_results = {}
         for mask_name, predictions in self._predictions_per_mask_type.items():
             self._predictions = predictions
             if self._distributed:
@@ -112,12 +113,14 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
             if "proposals" in self._predictions[0]:
                 self._eval_box_proposals()
             if "instances" in self._predictions[0]:
-                self._eval_predictions(set(self._tasks), mask_name)
-
+                self._eval_predictions(set(self._tasks))
+            res = copy.deepcopy(self._results)
+            for k in res.keys():
+                all_results[k + mask_name] = res.pop(k)
         # Copy so the caller can do whatever with results
-        return copy.deepcopy(self._results)
+        return all_results
 
-    def _eval_predictions(self, tasks, mask_name=None):
+    def _eval_predictions(self, tasks):
         """
         Evaluate self._predictions on the given tasks.
         Fill self._results with the metrics of the tasks.
@@ -157,8 +160,7 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
             res = self._derive_coco_results(
                 coco_eval, task, class_names=self._metadata.get("thing_classes")
             )
-            task_name = task if mask_name is not None else task + '_' + mask_name
-            self._results[task_name] = res
+            self._results[task] = res
 
 
 def instances_to_json(instances, img_id, mask_field_names=('pred_masks_rle',)):
