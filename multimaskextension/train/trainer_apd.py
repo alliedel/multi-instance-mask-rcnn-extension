@@ -118,6 +118,7 @@ class Trainer_APD(TrainerBase):
         self.optimizer = self.build_optimizer(cfg, self.model)
         with Timer('Building dataloader'):
             self.data_loader = self.build_train_loader(cfg)
+            print('Batch size ', self.data_loader.batch_sampler.batch_size)
         self._data_loader_iter = iter(self.data_loader)
 
         # For training, wrap with DDP. But don't need this for inference.

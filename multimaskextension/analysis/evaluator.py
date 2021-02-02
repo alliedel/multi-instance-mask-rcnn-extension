@@ -1,13 +1,6 @@
-"""
-Example of an evaluator (from DensePose) -- should be implemented by the MultiMask class
-"""
+# -*- coding: utf-8 -*-
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-
-raise NotImplementedError
-
-
-
-from detectron2.evaluation import DatasetEvaluator
 import contextlib
 import copy
 import io
@@ -25,8 +18,10 @@ from detectron2.structures import BoxMode
 from detectron2.utils.comm import all_gather, is_main_process, synchronize
 from detectron2.utils.logger import create_small_table
 
+from .densepose_coco_evaluation import DensePoseCocoEval
 
-class MultiMaskCOCOEvaluator(DatasetEvaluator):
+
+class DensePoseCOCOEvaluator(DatasetEvaluator):
     def __init__(self, dataset_name, distributed, output_dir=None):
         self._distributed = distributed
         self._output_dir = output_dir
@@ -100,7 +95,6 @@ def prediction_to_json(instances, img_id):
     Returns:
         list[dict]: the results in densepose evaluation format
     """
-    raise NotImplementedError
     scores = instances.scores.tolist()
 
     results = []
@@ -118,7 +112,6 @@ def prediction_to_json(instances, img_id):
 
 
 def _evaluate_predictions_on_coco(coco_gt, coco_results):
-    raise NotImplementedError
     metrics = ["AP", "AP50", "AP75", "APm", "APl"]
 
     logger = logging.getLogger(__name__)
@@ -127,11 +120,11 @@ def _evaluate_predictions_on_coco(coco_gt, coco_results):
         logger.warn("No predictions from the model! Set scores to -1")
         return {metric: -1 for metric in metrics}
 
-    # coco_dt = coco_gt.loadRes(coco_results)
-    # coco_eval = DensePoseCocoEval(coco_gt, coco_dt, "densepose")
-    # coco_eval.evaluate()
-    # coco_eval.accumulate()
-    # coco_eval.summarize()
+    coco_dt = coco_gt.loadRes(coco_results)
+    coco_eval = DensePoseCocoEval(coco_gt, coco_dt, "densepose")
+    coco_eval.evaluate()
+    coco_eval.accumulate()
+    coco_eval.summarize()
 
     # the standard metrics
     results = {metric: float(coco_eval.stats[idx] * 100) for idx, metric in enumerate(metrics)}
