@@ -3,6 +3,8 @@ import os
 import torch
 import json
 
+from tabulate import tabulate
+
 from multimaskextension.train import script_utils
 import detectron2.utils.comm as comm
 from detectron2.data import MetadataCatalog
@@ -101,9 +103,11 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
         for task, res in results.items():
             # Don't print "AP-category" metrics since they are usually not tracked.
             important_res = [(k, v) for k, v in res.items() if "-" not in k]
-            f.write("copypaste: Task: {}".format(task))
-            f.write("copypaste: " + ",".join([k[0] for k in important_res]))
-            f.write("copypaste: " + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
+            f.write("Task: {}".format(task))
+            f.write('\n')
+            f.write("" + ",".join([k[0] for k in important_res]))
+            f.write('\n')
+            f.write("" + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
 
     if save_all_predictions:
         for split, data_loader in dataloaders.items():
