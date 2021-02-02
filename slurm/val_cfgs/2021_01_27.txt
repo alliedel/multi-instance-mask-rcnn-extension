@@ -1,7 +1,12 @@
-/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-0
-/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-1
-/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MAX_ITR-270000_HEAD_TYPE-None
-/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-0 --val-dataset d2s_val_wo_occlusion
-/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-0 --val-dataset d2s_val_occlusion
-/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-0 --val-dataset d2s_val_clutter
-/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-01-27-154633_VCS-4195a36_MATCH-0 --val-dataset d2s_train
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-0
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-1
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MAX_ITR-270000_HEAD_TYPE-None
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-24-074402_VCS-64d87d7_MAX_ITR-270000_HEAD_TYPE-standard
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-0 --val-dataset d2s_val_wo_occlusion
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-0 --val-dataset d2s_val_occlusion
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-0 --val-dataset d2s_val_clutter
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-0 --val-dataset d2s_train
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-24-074402_VCS-64d87d7_MAX_ITR-270000_HEAD_TYPE-standard --val-dataset d2s_val_wo_occlusion
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-24-074402_VCS-64d87d7_MAX_ITR-270000_HEAD_TYPE-standard --val-dataset d2s_val_occlusion
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-24-074402_VCS-64d87d7_MAX_ITR-270000_HEAD_TYPE-standard --val-dataset d2s_val_clutter
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-24-074402_VCS-64d87d7_MAX_ITR-270000_HEAD_TYPE-standard --val-dataset d2s_val_train
