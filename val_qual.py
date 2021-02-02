@@ -1,13 +1,8 @@
 """
-The goal of train_two_masks_one_image is to overfit one image to two masks per box.  For the two cats - one chair
-image, this means each cat box predicts two cat masks, and the chair box predicts on chair.
-
-Step 1a: Modify multimask loss to send two different sets of weights / ground truth to the loss function
-Step 1b: Verify with multimask inference to see that the set of weights is learning the primary or secondary mask,
-depending on which one we switch between.
-
+Generates individual image predictions
 """
 import argparse
+import gc
 
 import local_pyutils
 import os
@@ -20,6 +15,11 @@ from multimaskextension.analysis import vis_utils
 from multimaskextension.train import script_utils
 from multimaskextension.train.script_utils import run_inference, visualize_instancewise_predictions, prep_image
 from multimaskextension.train.trainer_apd import Trainer_APD
+
+# We do this to force the multiroiheads to be added to the registry
+from multimaskextension.model import multi_roi_heads_apd
+from multimaskextension.data import registryextension
+
 
 exporter_ = None
 
@@ -48,33 +48,58 @@ def stochastic_train_on_set(trainer: Trainer_APD, batches, max_itr=100, start_it
             trainer.run_step_with_given_data(batches[int(t % N)])
 
 
-def main(resume, image_ids=('306284', '486536', '9')):
+# COCO: image_ids=('306284', '486536', '9')
+def main(resume, cfg_file, image_ids=None, split='train'):
+    if resume is None:
+        print('Warning: no model is being loaded. For debug validation only.')
     exporter = vis_utils.FigExporter()
 
     print('Beginning setup...')
-    cfg = script_utils.get_custom_maskrcnn_cfg()
-    trainer = Trainer_APD(cfg, out_dir='~/workspace', checkpoint_resume=resume)
+    assert os.path.exists(cfg_file), cfg_file
+    cfg = script_utils.get_custom_maskrcnn_cfg(cfg_file)
+    trainer = Trainer_APD(cfg, out_dir=os.path.expanduser('~/workspace'), checkpoint_resume=resume)
     head_type = 'custom'
     script_utils.activate_head_type(trainer, head_type)
 
-    trainer.test(cfg, trainer.model)
+    print('Completing setup...')
+    batches = []
+    if image_ids is not None:
+        for image_id in image_ids:
+            datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
+            batches.append([datapoint] if type(datapoint) is not list else datapoint)
+    else:
+        cachedir = './output/cache/input/'
+        assert os.path.isdir(cachedir)
+        # predictor.model.training = True
+        dataloader = script_utils.build_dataloader(cfg)
+        n_batches = 10
+        image_ids = []
+        for batch_i, ds in enumerate(dataloader):
+            if batch_i >= n_batches:
+                break
+            for d in ds:
+                image_id = d['image_id']
+                image_ids.append(image_id)
+                saved_input_file = os.path.join(cachedir, f"input_{image_id}.pt")
+                if not os.path.exists(saved_input_file):
+                    datapoint = d
+                    torch.save(datapoint, saved_input_file)
+        print('Image ids:')
+        print(image_ids)
+        gc.collect()
+        del dataloader
+        for image_id in image_ids:
+            datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
+            batches.append([datapoint] if type(datapoint) is not list else datapoint)
 
-    return
-    #
-    # print('Completing setup...')
-    # batches = []
-    # for image_id in image_ids:
-    #     datapoint = torch.load(script_utils.get_datapoint_file(cfg, image_id))
-    #     batches.append([datapoint] if type(datapoint) is not list else datapoint)
-    #
-    # input_images = [prep_image(batch[0], cfg) for batch in batches]
-    #
-    # cfg_tag = 'cfg_tag'
-    # itr = trainer.iter
-    # for masks_key in ['pred_masks1', 'pred_masks2']:
-    #     for image_id, input_image, batch in zip(image_ids, input_images, batches):
-    #         posttraining(cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), batch[0], exporter, image_id,
-    #                      input_image, itr, trainer, masks_key=masks_key, show_pipeline=False)
+    input_images = [prep_image(batch[0], cfg) for batch in batches]
+
+    cfg_tag = 'cfg_tag'
+    itr = trainer.iter
+    for masks_key in ['pred_masks1', 'pred_masks2']:
+        for image_id, input_image, batch in zip(image_ids, input_images, batches):
+            posttraining(cfg, cfg_tag + '_' + masks_key.replace('pred_masks', 'm'), batch[0], exporter, image_id,
+                         input_image, itr, trainer, masks_key=masks_key, show_pipeline=False)
 
 
 def posttraining(cfg, cfg_tag, dpt, exporter, image_id, input_image, max_iters, trainer, masks_key='pred_masks',

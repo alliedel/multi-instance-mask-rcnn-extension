@@ -1,0 +1,57 @@
+#FROM nvcr.io/nvidia/pytorch:20.09-py3
+#FROM pytorch/pytorch:1.4-cuda10.1-cudnn7-devel
+
+FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu16.04
+ARG PYTHON_VERSION=3.6
+ARG WITH_TORCHVISION=1
+RUN apt-get update && apt-get install -y --no-install-recommends \
+         build-essential \
+         cmake \
+         git \
+         curl \
+         ca-certificates \
+         libjpeg-dev \
+         libpng-dev && \
+     rm -rf /var/lib/apt/lists/*
+
+
+RUN curl -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+     chmod +x ~/miniconda.sh && \
+     ~/miniconda.sh -b -p /opt/conda && \
+     rm ~/miniconda.sh && \
+     /opt/conda/bin/conda install -y python=$PYTHON_VERSION numpy pyyaml scipy ipython mkl mkl-include ninja cython typing && \
+     /opt/conda/bin/conda install -y -c pytorch magma-cuda100 && \
+     /opt/conda/bin/conda clean -ya
+ENV PATH /opt/conda/bin:$PATH
+# This must be done before pip so that requirements.txt is available
+WORKDIR /opt/pytorch
+COPY . .
+
+#RUN git submodule sync && git submodule update --init --recursive
+RUN TORCH_CUDA_ARCH_LIST="3.5 5.2 6.0 6.1 7.0+PTX" TORCH_NVCC_FLAGS="-Xfatbin -compress-all" \
+    CMAKE_PREFIX_PATH="$(dirname $(which conda))/../" \
+    pip install -v .
+
+RUN if [ "$WITH_TORCHVISION" = "1" ] ; then git clone https://github.com/pytorch/vision.git && cd vision && pip install -v . ; else echo "building without torchvision" ; fi
+
+WORKDIR /workspace
+RUN chmod -R a+w .
+
+RUN apt-get update && apt-get install -y emacs
+RUN apt-get update && apt-get install sudo
+RUN pip install torch==1.5.1+cu101 torchvision==0.6.1+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+COPY requirements.txt .
+RUN pip install --upgrade pip
+RUN pip install cython
+RUN pip install -r requirements.txt
+ENV PYTHONPATH=$PYTHONPATH:/workspace/my_tools
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g $GID runuser-group
+RUN useradd --create-home -N -l -u $UID -g runuser-group -G sudo --shell /bin/bash runuser
+#RUN useradd -N -l -u $UID -g runuser-group -G sudo runuser
+RUN echo runuser:newpassword | chpasswd
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+ENV NVIDIA_REQUIRE_CUDA "cuda>=8.0"
+#RUN chown -R runuser:$(id -gn runuser) /home/runuser/.config

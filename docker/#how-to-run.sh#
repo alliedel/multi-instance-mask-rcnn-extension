@@ -1,0 +1,2 @@
+
+docker run --gpus all -v /home/allie/repos/multi-instance-mask-rcnn-extension/:/workspace/multi-instance-mask-rcnn-extension -v /home/allie/data:/workspace/data -v /home/allie/code/common/my_tools:/workspace/my_tools --user 1000:1000 -it maskrcnnextension

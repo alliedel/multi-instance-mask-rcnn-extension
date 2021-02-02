@@ -21,7 +21,7 @@ from multimaskextension.train.script_utils import get_custom_maskrcnn_cfg, get_d
     convert_datapoint_to_image_format, run_inference, visualize_instancewise_predictions
 from multimaskextension.analysis.vis_utils import FigExporter
 from multimaskextension.train.trainer_apd import Trainer_APD
-from detectron2.modeling.roi_heads.multi_mask_head_apd import CustomMaskRCNNConvUpsampleHeadAPD
+from multimaskextension.model.multi_mask_head_apd import CustomMaskRCNNConvUpsampleHeadAPD
 
 exporter_ = None
 

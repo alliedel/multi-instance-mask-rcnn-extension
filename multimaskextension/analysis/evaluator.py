@@ -1,5 +1,6 @@
-# -*- coding: utf-8 -*-
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+"""
+Example of an evaluator (from DensePose) -- should be implemented by the MultiMask class
+"""
 
 import contextlib
 import copy
@@ -8,33 +9,40 @@ import itertools
 import json
 import logging
 import os
+import pickle
 from collections import OrderedDict
+
+import detectron2.utils.comm as comm
+import numpy as np
+import pycocotools.mask as mask_util
 import torch
-from pycocotools.coco import COCO
-
 from detectron2.data import MetadataCatalog
-from detectron2.evaluation import DatasetEvaluator
-from detectron2.structures import BoxMode
-from detectron2.utils.comm import all_gather, is_main_process, synchronize
+from detectron2.evaluation.coco_evaluation import COCOEvaluator, instances_to_json
+from detectron2.structures import Boxes, BoxMode, pairwise_iou
 from detectron2.utils.logger import create_small_table
+from fvcore.common.file_io import PathManager
+from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
+from tabulate import tabulate
 
-from .densepose_coco_evaluation import DensePoseCocoEval
 
-
-class DensePoseCOCOEvaluator(DatasetEvaluator):
-    def __init__(self, dataset_name, distributed, output_dir=None):
-        self._distributed = distributed
-        self._output_dir = output_dir
-
-        self._cpu_device = torch.device("cpu")
-        self._logger = logging.getLogger(__name__)
-
-        self._metadata = MetadataCatalog.get(dataset_name)
-        with contextlib.redirect_stdout(io.StringIO()):
-            self._coco_api = COCO(self._metadata.json_file)
-
-    def reset(self):
-        self._predictions = []
+class MultiMaskCOCOEvaluator(COCOEvaluator):
+    def __init__(self, dataset_name, cfg, distributed, output_dir=None, mask_names=('pred_masks',)):
+        """
+        Args:
+            dataset_name (str): name of the dataset to be evaluated.
+                It must have the following corresponding metadata:
+                    "json_file": the path to the COCO format annotation
+            cfg (CfgNode): config instance
+            distributed (True): if True, will collect results from all ranks for evaluation.
+                Otherwise, will evaluate the results in the current process.
+            output_dir (str): optional, an output directory to dump results.
+        """
+        super().__init__(dataset_name, cfg, distributed, output_dir=output_dir)
+        self.mask_names = mask_names
+        self._predictions_per_mask_type = {
+            m: [] for m in mask_names
+        }
 
     def process(self, inputs, outputs):
         """
@@ -44,89 +52,71 @@ class DensePoseCOCOEvaluator(DatasetEvaluator):
                 contains keys like "height", "width", "file_name", "image_id".
             outputs: the outputs of a COCO model. It is a list of dicts with key
                 "instances" that contains :class:`Instances`.
-                The :class:`Instances` object needs to have `densepose` field.
         """
+        assert "instances" in outputs[0], NotImplementedError('We only handle instance segmentation evaluation.')
         for input, output in zip(inputs, outputs):
+            # TODO this is ugly
             instances = output["instances"].to(self._cpu_device)
-
-            boxes = instances.pred_boxes.tensor.clone()
-            boxes = BoxMode.convert(boxes, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS)
-            instances.pred_densepose = instances.pred_densepose.to_result(boxes)
-
-            json_results = prediction_to_json(instances, input["image_id"])
-            self._predictions.extend(json_results)
+            rle_mask_names = []
+            predictions = {}
+            for mask_name in self.mask_names:
+                prediction = {"image_id": input["image_id"]}
+                if output['instances'].has(mask_name):
+                    # use RLE to encode the masks, because they are too large and takes memory
+                    # since this evaluator stores outputs of the entire dataset
+                    # Our model may predict bool array, but cocoapi expects uint8
+                    rles = [
+                        mask_util.encode(np.array(mask[:, :, None], order="F", dtype="uint8"))[0]
+                        for mask in getattr(instances, mask_name)
+                    ]
+                    for rle in rles:
+                        # "counts" is an array encoded by mask_util as a byte-stream. Python3's
+                        # json writer which always produces strings cannot serialize a bytestream
+                        # unless you decode it. Thankfully, utf-8 works out (which is also what
+                        # the pycocotools/_mask.pyx does).
+                        rle["counts"] = rle["counts"].decode("utf-8")
+                    setattr(instances, 'pred_masks_rle', rles)
+                    instances.remove(mask_name)
+                else:
+                    raise ValueError(f"{mask_name} not in model instances output")
+                prediction["instances"] = instances_to_json(instances, input["image_id"])
+                if "proposals" in output:
+                    prediction["proposals"] = output["proposals"].to(self._cpu_device)
+                predictions[mask_name] = prediction
+                self._predictions_per_mask_type[mask_name].append(prediction)
 
     def evaluate(self):
-        if self._distributed:
-            synchronize()
-            self._predictions = all_gather(self._predictions)
-            self._predictions = list(itertools.chain(*self._predictions))
-            if not is_main_process():
-                return
+        all_results = OrderedDict()
+        for mask_name, predictions in self._predictions_per_mask_type.items():
+            self._logger.info(f"\n\n**** Mask name: {mask_name}")
+            print(f"\n\n**** Mask name: {mask_name}")
+            self._predictions = predictions
+            if self._distributed:
+                comm.synchronize()
+                self._predictions = comm.gather(self._predictions, dst=0)
+                self._predictions = list(itertools.chain(*self._predictions))
 
-        return copy.deepcopy(self._eval_predictions())
+                if not comm.is_main_process():
+                    return {}
 
-    def _eval_predictions(self):
-        """
-        Evaluate self._predictions on densepose.
-        Return results with the metrics of the tasks.
-        """
-        self._logger.info("Preparing results for COCO format ...")
+            if len(self._predictions) == 0:
+                self._logger.warning("[COCOEvaluator] Did not receive valid predictions.")
+                return {}
 
-        if self._output_dir:
-            file_path = os.path.join(self._output_dir, "coco_densepose_results.json")
-            with open(file_path, "w") as f:
-                json.dump(self._predictions, f)
-                f.flush()
-                os.fsync(f.fileno())
+            if self._output_dir:
+                PathManager.mkdirs(self._output_dir)
+                file_path = os.path.join(self._output_dir, "instances_predictions.pth")
+                with PathManager.open(file_path, "wb") as f:
+                    torch.save(predictions, f)
 
-        self._logger.info("Evaluating predictions ...")
-        res = OrderedDict()
-        res["densepose"] = _evaluate_predictions_on_coco(self._coco_api, self._predictions)
-        return res
-
-
-def prediction_to_json(instances, img_id):
-    """
-    Args:
-        instances (Instances): the output of the model
-        img_id (str): the image id in COCO
-
-    Returns:
-        list[dict]: the results in densepose evaluation format
-    """
-    scores = instances.scores.tolist()
-
-    results = []
-    for k in range(len(instances)):
-        densepose = instances.pred_densepose[k]
-        result = {
-            "image_id": img_id,
-            "category_id": 1,  # densepose only has one class
-            "bbox": densepose[1],
-            "score": scores[k],
-            "densepose": densepose,
-        }
-        results.append(result)
-    return results
-
-
-def _evaluate_predictions_on_coco(coco_gt, coco_results):
-    metrics = ["AP", "AP50", "AP75", "APm", "APl"]
-
-    logger = logging.getLogger(__name__)
-
-    if len(coco_results) == 0:  # cocoapi does not handle empty results very well
-        logger.warn("No predictions from the model! Set scores to -1")
-        return {metric: -1 for metric in metrics}
-
-    coco_dt = coco_gt.loadRes(coco_results)
-    coco_eval = DensePoseCocoEval(coco_gt, coco_dt, "densepose")
-    coco_eval.evaluate()
-    coco_eval.accumulate()
-    coco_eval.summarize()
-
-    # the standard metrics
-    results = {metric: float(coco_eval.stats[idx] * 100) for idx, metric in enumerate(metrics)}
-    logger.info("Evaluation results for densepose: \n" + create_small_table(results))
-    return results
+            self._results = OrderedDict()
+            if "proposals" in self._predictions[0]:
+                self._eval_box_proposals()
+            if "instances" in self._predictions[0]:
+                self._eval_predictions(set(self._tasks))
+            res = copy.deepcopy(self._results)
+            res_keys = list(res.keys())
+            for k in res_keys:
+                all_results[k + mask_name] = res.pop(k)
+        # Copy so the caller can do whatever with results
+        return all_results

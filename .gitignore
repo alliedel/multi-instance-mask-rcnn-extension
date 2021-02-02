@@ -9,6 +9,7 @@ datasets
 output/*
 *.jpg
 *.mp4
-
-my_tools
+data/*
+data
+scrap_local
 

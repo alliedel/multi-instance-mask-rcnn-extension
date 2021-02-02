@@ -234,8 +234,8 @@ def _tile_same_height_images_into_row(imgs, concatenated_image, concat_direction
         'Image shapes, attempting to concat {}ly: {}'.format(concat_direction, [i.shape for i in imgs])
 
     if concatenated_image is None:
-        all_h = shared_dim_val if shared_dim is 0 else sum([i.shape[0] for i in imgs])
-        all_w = shared_dim_val if shared_dim is 1 else sum([i.shape[1] for i in imgs])
+        all_h = shared_dim_val if shared_dim == 0 else sum([i.shape[0] for i in imgs])
+        all_w = shared_dim_val if shared_dim == 1 else sum([i.shape[1] for i in imgs])
         shp = (all_h, all_w, 3) if len(imgs[0].shape) == 3 else (all_h, all_w)
         concatenated_image = np.zeros(shp, dtype=np.uint8)
 

@@ -15,17 +15,23 @@ from PIL import Image
 from torch import nn
 
 from multimaskextension.analysis import vis_utils
-from detectron2.config import get_cfg
+from multimaskextension.config import get_cfg
 from detectron2.data import MetadataCatalog
 from detectron2.engine import DefaultTrainer
 from detectron2.evaluation.evaluator import inference_context
 from detectron2.modeling import detector_postprocess
-from detectron2.modeling.roi_heads import CustomMaskRCNNConvUpsampleHeadAPD
+from multimaskextension.model.multi_mask_head_apd import CustomMaskRCNNConvUpsampleHeadAPD
 from multimaskextension.analysis.vis_utils import visualize_single_image_output, input_img_to_rgb
 
-DETECTRON_MODEL_ZOO = os.path.expanduser('~/data/models/detectron_model_zoo')
-assert os.path.isdir(DETECTRON_MODEL_ZOO)
 DETECTRON_REPO = './detectron2_repo'
+if os.path.isdir('data/models'):
+    DETECTRON_MODEL_ZOO = 'data/models/detectron_model_zoo'
+else:
+    if 'DATAPATH' not in os.environ:
+        assert 'Could not find data/models.  Symlink to ./data, ' \
+               'or set the DATAPATH environment variable'
+    DETECTRON_MODEL_ZOO = os.path.join(os.environ['DATAPATH'], 'models/detectron_model_zoo')
+assert os.path.isdir(DETECTRON_MODEL_ZOO), DETECTRON_MODEL_ZOO
 
 
 def dbprint(*args, **kwargs):
@@ -175,26 +181,38 @@ def download_detectron_model_to_local_zoo(relpath):
     return outpath
 
 
-def get_custom_maskrcnn_cfg(
-        config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x_APD.yaml"):
-    cfg = get_maskrcnn_cfg(config_filepath)
-    standard_state_file = cfg.MODEL.WEIGHTS
-    ext = os.path.splitext(standard_state_file)[1]
+def get_custom_maskrcnn_cfg(config_filepath=f"configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x_APD.yaml",
+                            weights_checkpoint=None):
+    cfg = get_cfg()
+    assert os.path.exists(config_filepath), f"{config_filepath} does not exist"
+    cfg.merge_from_file(config_filepath)
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
+    # Find a model from detectron2's model zoo. You can either use the https://dl.fbaipublicfiles.... url,
+    # or use the
+    # following shorthand
     # Adjust state dict for multiple heads
-    if cfg.MODEL.ROI_HEADS.NAME == "MultiROIHeadsAPD":
-        multihead_state_file = standard_state_file.replace(f'{ext}', f'_multiheads_apd{ext}')
-        if not os.path.exists(multihead_state_file):
-            make_multihead_state_from_single_head_state(standard_state_file, multihead_state_file)
-        custom_state_file = multihead_state_file
-    else:
-        custom_state_file = standard_state_file
+    if weights_checkpoint is None:  # only do this if running initialization (from a standard head file)
+        model_rel_path = 'COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl'
+        local_path = download_detectron_model_to_local_zoo(model_rel_path)
+        cfg.MODEL.WEIGHTS = local_path
+        standard_state_file = cfg.MODEL.WEIGHTS
+        ext = os.path.splitext(standard_state_file)[1]
+        if cfg.MODEL.ROI_HEADS.NAME == "MultiROIHeadsAPD":
+            multihead_state_file = standard_state_file.replace(f'{ext}', f'_multiheads_apd{ext}')
+            if not os.path.exists(multihead_state_file):
+                make_multihead_state_from_single_head_state(standard_state_file, multihead_state_file)
+            custom_state_file = multihead_state_file
+        else:
+            custom_state_file = standard_state_file
 
-    # Adjust state dict for multiple masks
-    if cfg.MODEL.ROI_MASK_HEAD.N_MASKS_PER_ROI != 1:
-        multimask_state_file = custom_state_file.replace(f'{ext}', f'_multiheads_apd{ext}')
-        if not os.path.exists(multimask_state_file):
-            copy_singlemask_multihead_to_multimask_multihead(custom_state_file, multimask_state_file)
-        custom_state_file = multimask_state_file
+        # Adjust state dict for multiple masks
+        if cfg.MODEL.ROI_MASK_HEAD.N_MASKS_PER_ROI != 1:
+            multimask_state_file = custom_state_file.replace(f'{ext}', f'_multiheads_apd{ext}')
+            if not os.path.exists(multimask_state_file):
+                copy_singlemask_multihead_to_multimask_multihead(custom_state_file, multimask_state_file)
+            custom_state_file = multimask_state_file
+    else:
+        custom_state_file = weights_checkpoint
     cfg.MODEL.WEIGHTS = custom_state_file
     return cfg
 
@@ -202,6 +220,7 @@ def get_custom_maskrcnn_cfg(
 def get_maskrcnn_cfg(
         config_filepath=f"{DETECTRON_REPO}/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"):
     cfg = get_cfg()
+    assert os.path.exists(config_filepath), f"{config_filepath} does not exist"
     cfg.merge_from_file(config_filepath)
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
     # Find a model from detectron2's model zoo. You can either use the https://dl.fbaipublicfiles.... url,
@@ -231,6 +250,7 @@ def just_inference_on_dataset(model, data_loader, outdir, stop_after_n_points=No
     Returns:
         The return value of `evaluator.evaluate()`
     """
+    cuda = next(model.parameters()).is_cuda
     num_devices = torch.distributed.get_world_size() if torch.distributed.is_initialized() else 1
     logger = logging.getLogger(__name__)
     logger.info("Start inference on {} images".format(len(data_loader)))
@@ -250,7 +270,7 @@ def just_inference_on_dataset(model, data_loader, outdir, stop_after_n_points=No
 
     inference_outdir = os.path.join(outdir, 'predictions')
     if os.path.exists(inference_outdir):
-        raise Exception('Predictions outdir {} already exists.  Please delete.')
+        raise Exception(f"Predictions outdir {inference_outdir} already exists.  Please delete.")
     os.makedirs(inference_outdir)
     with inference_context(model), torch.no_grad():
         for idx, inputs in enumerate(data_loader):
@@ -268,8 +288,8 @@ def just_inference_on_dataset(model, data_loader, outdir, stop_after_n_points=No
                 images = model.preprocess_image(inputs)
                 features = model.backbone(images.tensor)
                 proposalss, proposal_lossess = model.proposal_generator(images, features, None)
-
-            torch.cuda.synchronize()
+            if cuda:
+                torch.cuda.synchronize()
             total_compute_time += time.time() - start_compute_time
             print(idx, '/', n_points)
             if data_loader.batch_sampler.batch_size != 1:
@@ -521,7 +541,7 @@ def visualize_instancewise_predictions(img, instance_outputs, cfg, exporter, tag
 
 def activate_head_type(trainer, head_type):
     trainer.model.roi_heads.active_mask_head = head_type
-    if head_type is 'custom':
+    if head_type == 'custom':
         assert type(trainer.model.roi_heads.mask_heads[trainer.model.roi_heads.active_mask_head]) is \
                CustomMaskRCNNConvUpsampleHeadAPD, 'Not using custom head; head type is {}'.format(type(
             trainer.model.roi_heads.mask_heads[trainer.model.roi_heads.active_mask_head]))

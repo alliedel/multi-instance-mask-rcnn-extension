@@ -1,3 +1,6 @@
 [submodule "detectron2_repo"]
 	path = detectron2_repo
 	url = https://alliedel@github.com/alliedel/detectron2.git
+[submodule "my_tools"]
+	path = my_tools
+	url = https://bitbucket.org/alliedel/my_tools

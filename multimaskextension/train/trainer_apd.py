@@ -92,14 +92,18 @@ class Predictor_APD(PredictorOrTrainerBase_APD):
 
 
 class Trainer_APD(TrainerBase):
-
-    def __init__(self, cfg, out_dir=None, interval_validate=1000, n_model_checkpoints=20, checkpoint_resume=None):
+    def __init__(self, cfg, out_dir=None, interval_validate=1000, n_model_checkpoints=20, checkpoint_resume=None,
+                 mode='train'):
         super().__init__()
-
+        self.mode = mode
         self.cfg = cfg.clone()  # cfg can be modified by model
         with Timer('Building model'):
             self.model = build_model(self.cfg)
-        self.metadata = MetadataCatalog.get(cfg.DATASETS.TEST[0])
+        if self.mode == 'train':
+            self.metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
+        else:
+            assert self.mode == 'test'
+            self.metadata = MetadataCatalog.get(cfg.DATASETS.TEST[0])
 
         checkpointer = DetectionCheckpointer(self.model)
         checkpointer.load(cfg.MODEL.WEIGHTS)
@@ -113,13 +117,20 @@ class Trainer_APD(TrainerBase):
         self.input_format = cfg.INPUT.FORMAT
         assert self.input_format in ["RGB", "BGR"], self.input_format
 
-        self.model.train()
+        if self.mode == 'train':
+            self.model.train()
+            self.optimizer = self.build_optimizer(cfg, self.model)
+        else:
+            self.model.eval()
 
-        self.optimizer = self.build_optimizer(cfg, self.model)
-        with Timer('Building dataloader'):
-            self.data_loader = self.build_train_loader(cfg)
-            print('Batch size ', self.data_loader.batch_sampler.batch_size)
-        self._data_loader_iter = iter(self.data_loader)
+        if self.mode == 'train':
+            with Timer('Building dataloader'):
+                self.train_data_loader = self.build_train_loader(cfg)
+            self.data_loader = self.train_data_loader
+        else:
+            raise NotImplementedError
+            self.data_loader = self.val_data_loader
+        self._data_loader_iter = iter(self.train_data_loader)
 
         # For training, wrap with DDP. But don't need this for inference.
         if comm.get_world_size() > 1:
@@ -138,7 +149,8 @@ class Trainer_APD(TrainerBase):
             scheduler=self.scheduler,
         )
         self.start_iter = 0  # Will be changed if/when resume state is loaded
-        self.max_iter = cfg.SOLVER.MAX_ITER
+        self.max_iter = cfg.SOLVER.MAX_ITER if not cfg.GLOBAL.ONE_EPOCH else \
+            len(self.data_loader.dataset)  # I should divide by batch size, but not sure how itrs map with distributed
         self.cfg = cfg
 
         # event storage
@@ -175,7 +187,7 @@ class Trainer_APD(TrainerBase):
             elif key == 'iteration':
                 self.start_iter = value
                 self.iter = value
-            elif key == 'model_state_dict':
+            elif key == 'model_state_dict' or key == 'model':
                 self.model.load_state_dict(value)
             elif key == 'optim_state_dict':
                 self.optimizer.load_state_dict(value)
@@ -185,17 +197,23 @@ class Trainer_APD(TrainerBase):
     def train(self):
         """
         Run training.
-
+        Parent calls:
+            self.before_train()
+            for self.iter in range(start_iter, max_iter):
+                self.before_step()
+                self.run_step()
+                self.after_step()
         Returns:
             OrderedDict of results, if evaluation is enabled. Otherwise None.
         """
-        super().train(self.start_iter, self.max_iter)
+        return super().train(self.start_iter, self.max_iter)
 
     def run_step(self):
         """
         Implement the standard training logic described above.
         """
-        self.run_step_with_given_data(next(self._data_loader_iter))
+        next_data = next(self._data_loader_iter)
+        self.run_step_with_given_data(next_data)
 
     def run_step_with_given_data(self, data):
         """
@@ -212,6 +230,8 @@ class Trainer_APD(TrainerBase):
         """
         If your want to do something with the losses, you can wrap the model.
         """
+        if self.cfg.GLOBAL.NOOP:
+            return
         loss_dict = self.model(data)
         losses = sum(loss for loss in loss_dict.values())
         self._detect_anomaly(losses, loss_dict)
