@@ -180,7 +180,7 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
             res = copy.deepcopy(self._results)
             res_keys = list(res.keys())
             for k in res_keys:
-                all_results[k + mask_name] = res.pop(k)
+                all_results[k + '-' + mask_name] = res.pop(k)
 
         # Copy so the caller can do whatever with results
         return all_results
