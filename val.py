@@ -103,6 +103,7 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
         for task, res in results.items():
             # Don't print "AP-category" metrics since they are usually not tracked.
             important_res = [(k, v) for k, v in res.items() if "-" not in k]
+            f.write('\n')
             f.write("Task: {}".format(task))
             f.write('\n')
             f.write("" + ",".join([k[0] for k in important_res]))

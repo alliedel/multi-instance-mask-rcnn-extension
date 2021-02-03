@@ -27,7 +27,8 @@ from tabulate import tabulate
 
 
 class MultiMaskCOCOEvaluator(COCOEvaluator):
-    def __init__(self, dataset_name, cfg, distributed, output_dir=None, mask_names=('pred_masks',)):
+    def __init__(self, dataset_name, cfg, distributed, output_dir=None, mask_names=('pred_masks',),
+                 eval_agg_masks=True, eval_distr_masks=True):
         """
         Args:
             dataset_name (str): name of the dataset to be evaluated.
@@ -43,6 +44,8 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
         self._predictions_per_mask_type = {
             m: [] for m in mask_names
         }
+        self.eval_distr_masks = eval_distr_masks
+        self.eval_agg_masks = eval_agg_masks
 
     def process(self, inputs, outputs):
         """
@@ -85,59 +88,84 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
                 predictions[mask_name] = prediction
                 self._predictions_per_mask_type[mask_name].append(prediction)
 
+    @property
+    def mask_names_agg(self):
+        return [nm for nm in self.mask_names if nm != 'pred_masks']
+
     def evaluate(self):
         all_results = OrderedDict()
 
-        # Evaluate each mask type individually
-        for mask_name, predictions in self._predictions_per_mask_type.items():
-            self._logger.info(f"\n\n**** Mask name: {mask_name}")
-            print(f"\n\n**** Mask name: {mask_name}")
-            self._predictions = predictions
+        for mask_name in self._predictions_per_mask_type.keys():
             if self._distributed:
                 comm.synchronize()
-                self._predictions = comm.gather(self._predictions, dst=0)
-                self._predictions = list(itertools.chain(*self._predictions))
-
+                self._predictions_per_mask_type[mask_name] = comm.gather(self._predictions[mask_name], dst=0)
+                self._predictions_per_mask_type[mask_name] = \
+                    list(itertools.chain(*self._predictions_per_mask_type[mask_name]))
                 if not comm.is_main_process():
                     return {}
-
-            if len(self._predictions) == 0:
+            if len(self._predictions_per_mask_type[mask_name]) == 0:
                 self._logger.warning("[COCOEvaluator] Did not receive valid predictions.")
                 return {}
 
-            if self._output_dir:
-                PathManager.mkdirs(self._output_dir)
-                file_path = os.path.join(self._output_dir, "instances_predictions.pth")
-                with PathManager.open(file_path, "wb") as f:
-                    torch.save(predictions, f)
+        if self.eval_agg_masks:
+            if self.eval_distr_masks:
+                # We need to make a copy for agg since evaluate changes them.
+                predictions_per_mask_type_for_agg = {
+                    mask_name: copy.deepcopy(self._predictions_per_mask_type[mask_name])
+                    for mask_name in self.mask_names_agg
+                }
+            else:
+                predictions_per_mask_type_for_agg = self._predictions_per_mask_type
+        else:
+            predictions_per_mask_type_for_agg = None
 
-            self._results = OrderedDict()
-            if "proposals" in self._predictions[0]:
-                self._eval_box_proposals()
-            if "instances" in self._predictions[0]:
-                self._eval_predictions(set(self._tasks))
-            res = copy.deepcopy(self._results)
-            res_keys = list(res.keys())
-            for k in res_keys:
-                all_results[k + '-' + mask_name] = res.pop(k)
+        if self.eval_distr_masks:
+            # Evaluate each mask type individually
+            for mask_name, predictions in self._predictions_per_mask_type.items():
+                self._predictions = predictions
+                self._logger.info(f"\n\n**** Mask name: {mask_name}")
+                print(f"\n\n**** Mask name: {mask_name}")
+                if self._output_dir:
+                    PathManager.mkdirs(self._output_dir)
+                    file_path = os.path.join(self._output_dir, "instances_predictions.pth")
+                    with PathManager.open(file_path, "wb") as f:
+                        torch.save(predictions, f)
 
-        # Evaluate all masks together
-        for mask_name, predictions in self._predictions_per_mask_type.items():
+                self._results = OrderedDict()
+                if "proposals" in self._predictions[0]:
+                    self._eval_box_proposals()
+                if "instances" in self._predictions[0]:
+                    self._eval_predictions(set(self._tasks))
+                res = copy.deepcopy(self._results)
+                res_keys = list(res.keys())
+                for k in res_keys:
+                    all_results[k + '-' + mask_name] = res.pop(k)
+
+            if len(self.mask_names) <= 1:
+                return all_results
+
+        if self.eval_agg_masks:
+            # Evaluate all masks together
+            # pred_masks is a pointer to another mask (pred_masks1, pred_masks2).  This could
+            # change and be a source for bugs down the road, but the pointers aren't preserved after distributed compute,
+            # so we can't verify at the moment
+            n_val_images = len(self._predictions_per_mask_type[self.mask_names_agg[0]])
+            # assert all([n_val_images == len(self._predictions_per_mask_type[nm]) for nm in mask_names_agg])
+            predictions = [{'image_id': predictions_per_mask_type_for_agg[self.mask_names_agg[0]][i]['image_id'],
+                            'instances': []}
+                           for i in range(n_val_images)]
+
+            # TODO(allie): definitely a faster way than this double for loop.
+            for nm in self.mask_names_agg:
+                subpreds = predictions_per_mask_type_for_agg[nm]
+                for i in range(n_val_images):
+                    assert subpreds[i]['image_id'] == predictions[i]['image_id']
+                    predictions[i]['instances'].extend(subpreds[i]['instances'])
+            mask_name = "agg-{}".format("_".join(self.mask_names_agg))
             self._logger.info(f"\n\n**** Mask name: {mask_name}")
             print(f"\n\n**** Mask name: {mask_name}")
+
             self._predictions = predictions
-            if self._distributed:
-                comm.synchronize()
-                self._predictions = comm.gather(self._predictions, dst=0)
-                self._predictions = list(itertools.chain(*self._predictions))
-
-                if not comm.is_main_process():
-                    return {}
-
-            if len(self._predictions) == 0:
-                self._logger.warning("[COCOEvaluator] Did not receive valid predictions.")
-                return {}
-
             if self._output_dir:
                 PathManager.mkdirs(self._output_dir)
                 file_path = os.path.join(self._output_dir, "instances_predictions.pth")
