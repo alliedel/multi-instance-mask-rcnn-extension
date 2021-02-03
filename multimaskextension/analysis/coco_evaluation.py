@@ -21,7 +21,7 @@ from detectron2.data import MetadataCatalog
 from detectron2.structures import Boxes, BoxMode, pairwise_iou
 from detectron2.utils.logger import create_small_table
 
-from .evaluator import DatasetEvaluator
+from .multimaskevaluator import DatasetEvaluator
 
 
 class COCOEvaluator(DatasetEvaluator):

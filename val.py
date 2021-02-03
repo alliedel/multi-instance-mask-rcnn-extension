@@ -25,7 +25,7 @@ from detectron2.engine import DefaultTrainer
 from multimaskextension.model import multi_roi_heads_apd
 from multimaskextension.data import registryextension
 from multimaskextension.train.trainer_apd import Trainer_APD
-from multimaskextension.analysis.evaluator import MultiMaskCOCOEvaluator
+from multimaskextension.analysis.multimaskevaluator import MultiMaskCOCOEvaluator
 import pickle
 
 

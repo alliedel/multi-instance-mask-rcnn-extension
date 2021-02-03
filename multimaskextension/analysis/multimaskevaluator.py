@@ -87,6 +87,41 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
 
     def evaluate(self):
         all_results = OrderedDict()
+
+        # Evaluate each mask type individually
+        for mask_name, predictions in self._predictions_per_mask_type.items():
+            self._logger.info(f"\n\n**** Mask name: {mask_name}")
+            print(f"\n\n**** Mask name: {mask_name}")
+            self._predictions = predictions
+            if self._distributed:
+                comm.synchronize()
+                self._predictions = comm.gather(self._predictions, dst=0)
+                self._predictions = list(itertools.chain(*self._predictions))
+
+                if not comm.is_main_process():
+                    return {}
+
+            if len(self._predictions) == 0:
+                self._logger.warning("[COCOEvaluator] Did not receive valid predictions.")
+                return {}
+
+            if self._output_dir:
+                PathManager.mkdirs(self._output_dir)
+                file_path = os.path.join(self._output_dir, "instances_predictions.pth")
+                with PathManager.open(file_path, "wb") as f:
+                    torch.save(predictions, f)
+
+            self._results = OrderedDict()
+            if "proposals" in self._predictions[0]:
+                self._eval_box_proposals()
+            if "instances" in self._predictions[0]:
+                self._eval_predictions(set(self._tasks))
+            res = copy.deepcopy(self._results)
+            res_keys = list(res.keys())
+            for k in res_keys:
+                all_results[k + '-' + mask_name] = res.pop(k)
+
+        # Evaluate all masks together
         for mask_name, predictions in self._predictions_per_mask_type.items():
             self._logger.info(f"\n\n**** Mask name: {mask_name}")
             print(f"\n\n**** Mask name: {mask_name}")
@@ -118,5 +153,6 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
             res_keys = list(res.keys())
             for k in res_keys:
                 all_results[k + mask_name] = res.pop(k)
+
         # Copy so the caller can do whatever with results
         return all_results
