@@ -11,13 +11,15 @@ import logging
 import os
 import pickle
 from collections import OrderedDict
+from pycocotools import mask as maskUtils
+
 
 import detectron2.utils.comm as comm
 import numpy as np
 import pycocotools.mask as mask_util
 import torch
 from detectron2.data import MetadataCatalog
-from detectron2.evaluation.coco_evaluation import COCOEvaluator, instances_to_json
+from detectron2.evaluation.coco_evaluation import COCOEvaluator, instances_to_json, _evaluate_predictions_on_coco
 from detectron2.structures import Boxes, BoxMode, pairwise_iou
 from detectron2.utils.logger import create_small_table
 from fvcore.common.file_io import PathManager
@@ -107,6 +109,9 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
                 self._logger.warning("[COCOEvaluator] Did not receive valid predictions.")
                 return {}
 
+        self.get_ious(coco_results, coco_gt)
+
+
         if self.eval_agg_masks:
             if self.eval_distr_masks:
                 # We need to make a copy for agg since evaluate changes them.
@@ -147,7 +152,8 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
         if self.eval_agg_masks:
             # Evaluate all masks together
             # pred_masks is a pointer to another mask (pred_masks1, pred_masks2).  This could
-            # change and be a source for bugs down the road, but the pointers aren't preserved after distributed compute,
+            # change and be a source for bugs down the road, but the pointers aren't preserved after distributed
+            # compute,
             # so we can't verify at the moment
             n_val_images = len(self._predictions_per_mask_type[self.mask_names_agg[0]])
             # assert all([n_val_images == len(self._predictions_per_mask_type[nm]) for nm in mask_names_agg])
@@ -184,3 +190,62 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
 
         # Copy so the caller can do whatever with results
         return all_results
+
+    def _eval_predictions(self, tasks):
+        """
+        Evaluate self._predictions on the given tasks.
+        Fill self._results with the metrics of the tasks.
+        """
+        self._logger.info("Preparing results for COCO format ...")
+        self._coco_results = list(itertools.chain(*[x["instances"] for x in self._predictions]))
+
+        coco_results = self._coco_results
+        coco_gt = self._coco_api
+        ious = self.get_ious(coco_results, coco_gt)
+
+
+        # unmap the category ids for COCO
+        if hasattr(self._metadata, "thing_dataset_id_to_contiguous_id"):
+            reverse_id_mapping = {
+                v: k for k, v in self._metadata.thing_dataset_id_to_contiguous_id.items()
+            }
+            for result in self._coco_results:
+                result["category_id"] = reverse_id_mapping[result["category_id"]]
+
+        if self._output_dir:
+            file_path = os.path.join(self._output_dir, "coco_instances_results.json")
+            self._logger.info("Saving results to {}".format(file_path))
+            with PathManager.open(file_path, "w") as f:
+                f.write(json.dumps(self._coco_results))
+                f.flush()
+
+        if not self._do_evaluation:
+            self._logger.info("Annotations are not available for evaluation.")
+            return
+
+        self._logger.info("Evaluating predictions ...")
+        for task in sorted(tasks):
+            coco_eval = (
+                _evaluate_predictions_on_coco(
+                    self._coco_api, self._coco_results, task, kpt_oks_sigmas=self._kpt_oks_sigmas
+                )
+                if len(self._coco_results) > 0
+                else None  # cocoapi does not handle empty results very well
+            )
+
+            res = self._derive_coco_results(
+                coco_eval, task, class_names=self._metadata.get("thing_classes")
+            )
+            self._results[task] = res
+
+    def get_ious(self, coco_results, coco_gt):
+
+        coco_dt = coco_gt.loadRes(coco_results)
+        coco_eval = COCOeval(coco_gt, coco_dt, iouType='segm')
+
+        ious = {(imgId, catId): coco_eval.computeIoU(imgId, catId) \
+                for imgId in coco_eval.params.imgIds
+                for catId in coco_eval.params.catIds}
+
+        # ious = self.ious[imgId, catId][:, gtind] if len(self.ious[imgId, catId]) > 0 else self.ious[imgId,
+        # catId]
