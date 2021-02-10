@@ -27,7 +27,7 @@ from multimaskextension.data import registryextension
 from multimaskextension.train.trainer_apd import Trainer_APD
 from multimaskextension.analysis.multimaskevaluator import MultiMaskCOCOEvaluator
 import pickle
-
+import glob
 
 def dbprint(*args, **kwargs):
     print(*args, **kwargs)
@@ -53,24 +53,39 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     config_filepath = config_filepath or os.path.join(trained_logdir, 'config.yaml')
     assert os.path.exists(config_filepath), config_filepath
 
-    checkpoint_resume = os.path.join(trained_logdir, rel_model_pth)
+    checkpoint_pth = os.path.join(trained_logdir, rel_model_pth)
+    if os.path.isdir(checkpoint_pth):
+        checkpoint_dir = checkpoint_pth
+        checkpoints_in_dir = glob.glob(os.path.join(checkpoint_dir, '*.pth*'))
+        if len(checkpoints_in_dir) == 0:
+            raise ValueError(f"{checkpoint_dir} has no checkpoints.  "
+                             f"Please specify a parent directory or the name of a checkpoint file")
+        checkpoints = checkpoints_in_dir
+    else:
+        checkpoints = [checkpoint_pth]
+    train_basename = os.path.basename(trained_logdir.strip(os.path.sep))
 
+    for checkpoint in checkpoints:
+
+        val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, save_all_predictions, train_basename,
+                              val_dataset)
+
+
+def val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, save_all_predictions, train_basename,
+                          val_dataset):
     # I. Load pre-existing Mask R-CNN model
-    cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath, weights_checkpoint=checkpoint_resume)
+    cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath, weights_checkpoint=checkpoint)
     if cpu:
         cfg.MODEL.DEVICE = 'cpu'
     if val_dataset is not None:
         if type(val_dataset) is str:
             val_dataset = [val_dataset]
         cfg.DATASETS.TEST = val_dataset
-
     model = Trainer_APD.build_model(cfg)
-
     print('Loading state dict')
-    state = torch.load(checkpoint_resume, map_location=torch.device('cpu')) if cpu \
-        else torch.load(checkpoint_resume)
+    state = torch.load(checkpoint, map_location=torch.device('cpu')) if cpu \
+        else torch.load(checkpoint)
     model.load_state_dict(state['model_state_dict'])
-
     # e. Load full dataset
     print('CFG: ')
     print(cfg)
@@ -85,9 +100,8 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     }
     print('Number of training images: ', len(dataloaders['train']))
     print('Number of validation images: ', len(dataloaders['val']))
-
-    outdir = os.path.join('output', 'logs', 'test', os.path.basename(trained_logdir.strip(os.path.sep)),
-                          cfg.DATASETS.TEST[0])
+    outdir = os.path.join('output', 'logs', 'test', train_basename,
+                          cfg.DATASETS.TEST[0], f"itr{state['iteration']}")
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     evaluators = build_evaluator(cfg, dataset_name=cfg.DATASETS.TEST[0], output_folder=outdir, distributed=False)
@@ -109,7 +123,6 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
             f.write("" + ",".join([k[0] for k in important_res]))
             f.write('\n')
             f.write("" + ",".join(["{0:.4f}".format(k[1]) for k in important_res]))
-
     if save_all_predictions:
         for split, data_loader in dataloaders.items():
             n_points = None  # Set to 10 or so for debugging
@@ -140,7 +153,9 @@ def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--trained-logdir', required=True)
     parser.add_argument('--overwrite-preds', required=False, default=None)
-    parser.add_argument('--rel-model-pth', required=False, default='checkpoint.pth.tar')
+    parser.add_argument('--rel-model-pth', required=False, default='checkpoint.pth.tar',
+                        help='filename ending in .pth.tar.  If a directory, will run inference on all models in '
+                             'directory.')
     parser.add_argument('--val-dataset', required=False, default=None, type=lambda arg: arg.split(','),
                         help='Give comma-separated list of validation datasets.  Default: The dataset specified in '
                              'cfg.DATASETS.TEST')
