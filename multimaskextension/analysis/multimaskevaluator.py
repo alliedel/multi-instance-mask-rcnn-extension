@@ -156,6 +156,7 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
         all_results.update(agg_results)
         all_coco_evals = coco_evals_individual
         all_coco_evals.update(coco_evals_agg)
+        torch.save(all_results, os.path.join(self._output_dir, "statresults.pth"))
         return copy.deepcopy(all_results), copy.deepcopy(all_coco_evals)
 
     def verify_and_remove_instances(self, mask_idxs_to_remove_per_img, predictions_to_remove_from, ref_preds=None):
@@ -168,8 +169,10 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
                 instances_removed.append({'imgidx': imgidx,
                                           'image_id': predictions_to_remove_from[imgidx]['image_id'],
                                           'inst_idx': empty_idx,
-                                          'inst_id': ref_preds[imgidx]['instances'][empty_idx]['id'],
-                                          'area': ref_preds[imgidx]['instances'][empty_idx]['area']}
+                                          'inst_id': ref_preds[imgidx]['instances'][empty_idx]['id']
+                                          if ref_preds is not None else None,
+                                          'area': ref_preds[imgidx]['instances'][empty_idx]['area']
+                                          if ref_preds is not None else None}
                                          )
         return instances_removed
 
