@@ -157,6 +157,7 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
         all_coco_evals = coco_evals_individual
         all_coco_evals.update(coco_evals_agg)
         torch.save(all_results, os.path.join(self._output_dir, "statresults.pth"))
+        torch.save(all_coco_evals, os.path.join(self._output_dir, "cocoevals.pth"))
         return copy.deepcopy(all_results), copy.deepcopy(all_coco_evals)
 
     def verify_and_remove_instances(self, mask_idxs_to_remove_per_img, predictions_to_remove_from, ref_preds=None):
@@ -238,11 +239,11 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
             predictions, coco_api, self._tasks, output_dir=self._output_dir,
             json_outfile=f"coco_instances_results_{mask_name}.json")
         combined_results = OrderedDict()
-        coco_evals = {}
+        coco_evals = OrderedDict()
         res_keys = list(res_unnamed.keys())
         for k in res_keys:
             combined_results[k + '-' + mask_name] = res_unnamed.pop(k)
-        for task in list(coco_evals.keys()):
+        for task in list(coco_evals_unnamed.keys()):
             coco_evals[(mask_name, task)] = coco_evals_unnamed.pop(task)
         return combined_results, coco_evals
 
