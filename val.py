@@ -66,7 +66,6 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     train_basename = os.path.basename(trained_logdir.strip(os.path.sep))
 
     for checkpoint in checkpoints:
-
         val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, save_all_predictions, train_basename,
                               val_dataset)
 

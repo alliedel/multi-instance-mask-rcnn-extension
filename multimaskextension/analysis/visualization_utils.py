@@ -71,8 +71,6 @@ def label_colormap(N=256):
     return cmap
 
 
-
-
 def visualize_labelcolormap(*args, **kwargs):
     warnings.warn(
         'visualize_labelcolormap is renamed to visualize_label_colormap',

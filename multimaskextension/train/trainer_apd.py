@@ -357,7 +357,7 @@ class Trainer_APD(TrainerBase):
                 if evaluators is not None
                 else cls.build_evaluator(cfg, dataset_name)
             )
-            results_i = inference_on_dataset(model, data_loader, evaluator)
+            results_i, coco_evals = inference_on_dataset(model, data_loader, evaluator)
             results[dataset_name] = results_i
             if comm.is_main_process():
                 assert isinstance(
