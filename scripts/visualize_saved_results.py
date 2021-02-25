@@ -7,23 +7,20 @@ from detectron2.utils.visualizer import Visualizer
 from multimaskextension.train import script_utils
 from multimaskextension.analysis.vis_utils import cv2_imshow, FigExporter
 
-with open('output/mask_rcnn_R_50_FPN_3x/filelist_train.txt', 'r') as f:
-    image_filenames = [s.strip() for s in f.readlines()]
-image_ids = [os.path.splitext(os.path.basename(s))[0].lstrip('0') for s in image_filenames]
 
-# index = 0
-# image_id = os.path.splitext(os.path.basename(image_filenames[index]))[0]
+testtraindir = '/afs_directories/kalman/code/multi-instance-mask-rcnn-extension/output/logs/test\
+/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-0'
+testsplit = 'd2s_val_occlusion'
+itr_name = 'itr256000'
 
-# base_image_id = '306284'
-base_image_id = '486536'  # 2 cats
-# base_image_id = '9'
-index = image_ids.index(base_image_id)
-image_id = os.path.splitext(os.path.basename(image_filenames[index]))[0]
-# image_ids = ('9', '306284', '389490')
+testdir = os.path.join(testtraindir, testsplit, itr_name)
 
+# prediction_file = 'output/mask_rcnn_R_50_FPN_3x/predictions/output_{}.pt'.format(image_id)
+# proposals_file = 'output/mask_rcnn_R_50_FPN_3x/proposals/proposals_{}.pt'.format(image_id)
 
-prediction_file = 'output/mask_rcnn_R_50_FPN_3x/predictions/output_{}.pt'.format(image_id)
-proposals_file = 'output/mask_rcnn_R_50_FPN_3x/proposals/proposals_{}.pt'.format(image_id)
+preds_pth_name = 'instances_predictions_agg-pred_masks1_pred_masks2.pth'
+
+os.path.join(testdir, coco_instances_results_agg-pred_masks1_pred_masks2.json)
 
 exporter = FigExporter()
 

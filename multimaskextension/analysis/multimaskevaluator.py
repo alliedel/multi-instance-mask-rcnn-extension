@@ -97,7 +97,9 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
                     instances.remove(mask_name)
                 else:
                     raise ValueError(f"{mask_name} not in model instances output")
-                prediction["instances"] = instances_to_json(instances, input["image_id"])
+                prediction["instances"] = instances_to_json(instances, input["image_id"],
+                                                            in_bbox_mode=BoxMode.XYXY_ABS,
+                                                            out_bbox_mode=BoxMode.XYXY_ABS)
                 if "proposals" in output:
                     prediction["proposals"] = output["proposals"].to(self._cpu_device)
                 predictions[mask_name] = prediction
@@ -130,11 +132,11 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
                                                                  self._predictions_per_mask_type[mask_name])
             log_and_print(self._logger, f"\n Mask {mask_name}: Removed {len(instances_removed)} zero-area instances.")
 
-        #   C. Make a copy for aggregated evaluation stage (evaluate() modifies predictions)
         predictions_per_mask_type_for_agg = {
             mask_name: copy.deepcopy(self._predictions_per_mask_type[mask_name])
             for mask_name in self.mask_names_agg
         } if self.eval_agg_masks else None
+        #   C. Make a copy for aggregated evaluation stage (evaluate() modifies predictions)
 
         # II. Per-mask evaluation & fill predictions['instances'][inst_idx]['area'] and ['id']
         log_and_print(self._logger, "Evaluating multimask predictions")
@@ -259,6 +261,7 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
             pass  # Fine if self._results is not populated
         self._results = OrderedDict()
         self._predictions = predictions
+
         if "proposals" in predictions[0]:
             self._eval_box_proposals()
         if "instances" in predictions[0]:
@@ -679,13 +682,15 @@ def evaluateImg(cocoeval: COCOeval, imgId, catId, aRng, maxDet):
     }
 
 
-def instances_to_json(instances, img_id):
+def instances_to_json(instances, img_id, in_bbox_mode=BoxMode.XYXY_ABS, out_bbox_mode=BoxMode.XYXY_ABS):
     num_instance = len(instances)
     if num_instance == 0:
         return []
 
     boxes = instances.pred_boxes.tensor.numpy()
-    boxes = BoxMode.convert(boxes, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS)
+    if in_bbox_mode != out_bbox_mode:
+        boxes = BoxMode.convert(boxes, in_bbox_mode, out_bbox_mode)
+        # boxes = BoxMode.convert(boxes, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS)
     boxes = boxes.tolist()
     scores = instances.scores.tolist()
     classes = instances.pred_classes.tolist()
@@ -705,6 +710,7 @@ def instances_to_json(instances, img_id):
             "category_id": classes[k],
             "bbox": boxes[k],
             "score": scores[k],
+            # "box_mode": out_bbox_mode
         }
         if has_mask:
             result["segmentation"] = rles[k]
