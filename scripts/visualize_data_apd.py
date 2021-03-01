@@ -1,4 +1,20 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+## For predictions:
+# visualize_data_apd.py
+#   --source prediction
+#   --predictions-json output/logs/test/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-0/
+#       d2s_val_occlusion/itr256000/coco_instances_results_agg-pred_masks1_pred_masks2.json
+#   --dataset d2s_val_occlusion
+#   --config-file output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-1/config.yaml
+#   --output-dir /home/adelgior/workspace/images/visualize_data
+
+## For GT:
+# visualize_data_apd.py
+#   --source dataset
+#   --dataset d2s_val_occlusion
+#   --config-file output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-1/config.yaml
+#   --source annotation
+#   --output-dir /home/adelgior/workspace/images/visualize_data
+
 import argparse
 import json
 import os
