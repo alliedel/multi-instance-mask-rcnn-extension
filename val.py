@@ -80,6 +80,7 @@ def val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, sav
         if type(val_dataset) is str:
             val_dataset = [val_dataset]
         cfg.DATASETS.TEST = val_dataset
+
     model = Trainer_APD.build_model(cfg)
     print('Loading state dict')
     state = torch.load(checkpoint, map_location=torch.device('cpu')) if cpu \
@@ -103,6 +104,10 @@ def val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, sav
                           cfg.DATASETS.TEST[0], f"itr{state['iteration']}")
     if not os.path.exists(outdir):
         os.makedirs(outdir)
+    assert os.path.exists(os.path.join(outdir, 'config.yaml'))
+    config_outpath = os.path.join(outdir, "config_resume.yaml")
+    with open(config_outpath, "w") as f:
+        f.write(cfg.dump())
     evaluators = build_evaluator(cfg, dataset_name=cfg.DATASETS.TEST[0], output_folder=outdir, distributed=False)
     print('Testing')
     results = Trainer_APD.test(cfg, model, evaluators)

@@ -9,7 +9,6 @@
 
 ## For GT:
 # visualize_data_apd.py
-#   --source dataset
 #   --dataset d2s_val_occlusion
 #   --config-file output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-1/config.yaml
 #   --source annotation
