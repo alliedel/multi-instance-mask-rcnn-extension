@@ -2,7 +2,7 @@ import os, glob, argparse
 
 dirname = os.path.abspath('.')
 
-TESTBASEDIR='output/logs/test'
+TESTBASEDIR='output/logs/test/'
 VIS_PRED_OUT='data/cache/vis/pred'
 VIS_GT_OUT='data/cache/vis/gt/d2s'
 
@@ -13,7 +13,7 @@ def main(outfile, overwrite):
     for testdir in testdirs:
         predsdir = os.path.join(testdir, 'itr256000')
         dataset = os.path.basename(testdir)
-        for mask_json in glob.glob(os.path.join(predsdir, 'coco_instances_results_pred*.json')):
+        for mask_json in glob.glob(os.path.join(predsdir, 'coco_instances_results_*pred*.json')):
             preds_rel_dir = os.path.relpath(mask_json, 'output/logs/test/').rstrip('.json')
             vis_outdir = os.path.join(VIS_PRED_OUT, preds_rel_dir)
             if os.path.exists(vis_outdir) and not overwrite:
