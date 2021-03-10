@@ -104,7 +104,6 @@ def val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, sav
                           cfg.DATASETS.TEST[0], f"itr{state['iteration']}")
     if not os.path.exists(outdir):
         os.makedirs(outdir)
-    assert os.path.exists(os.path.join(outdir, 'config.yaml'))
     config_outpath = os.path.join(outdir, "config_resume.yaml")
     with open(config_outpath, "w") as f:
         f.write(cfg.dump())
