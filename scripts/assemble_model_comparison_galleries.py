@@ -10,6 +10,8 @@ import argparse
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--path-to-font',
+                        default="/home/adelgior/code/multi-instance-mask-rcnn-extension/data/cache/vis/gt/d2s/")
     parser.add_argument('--gt-segmvis-dir',
                         default="/home/adelgior/code/multi-instance-mask-rcnn-extension/data/cache/vis/gt/d2s/")
     parser.add_argument('--pred-segmvis-dir',
@@ -25,8 +27,18 @@ def center_start_loc(im_sz, rect_sz):
     return (margin_tot[0] // 2, margin_tot[1] // 2)
 
 
-def get_font(sz):
-    return ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", sz, encoding="unic")
+def get_font_path():
+    pths = ["FreeMono.ttf", "/usr/share/fonts/truetype/freefont/FreeMono.ttf"]
+    for pth in pths:
+        if os.path.exists(pth):
+            return pth
+    return None
+
+
+def get_font(sz, fontpth=None):
+    if fontpth is None:
+        fontpth = get_font_path()
+    return ImageFont.truetype(fontpth, sz, encoding="unic")
 
 
 def get_font_fontsize_and_loc(im_sz, text, img_fraction=0.80):
