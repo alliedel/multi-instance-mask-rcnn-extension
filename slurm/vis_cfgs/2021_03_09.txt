@@ -1,0 +1,2 @@
+--source annotation --dataset d2s_val --config-file configs/2021_01_23_d2s/custom_match.yaml --source annotation --output-dir data/cache/vis/gt/d2s
+--source annotation --dataset d2s_train --config-file configs/2021_01_23_d2s/custom_match.yaml --source annotation --output-dir data/cache/vis/gt/d2s

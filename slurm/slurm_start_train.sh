@@ -14,7 +14,7 @@ while :; do
 done
 
 if [ -z "$1" ]; then
-    echo "Please give a directory, e.g. configs/2021-01-27/"
+    echo "Please give a directory or file, e.g. configs/2021-01-27/"
     exit 1
 fi
 
