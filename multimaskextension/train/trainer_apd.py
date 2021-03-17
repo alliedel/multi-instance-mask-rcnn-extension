@@ -220,6 +220,8 @@ class Trainer_APD(TrainerBase):
         Implement the standard training logic described above.
         """
         self.pbar.update(1)
+        memory_allocated = torch.cuda.memory_allocated(device=None)
+        self.pbar.set_postfix({'nimgs': data.size(0), 'mem (GB)': memory_allocated / 1e9})
         assert self.model.training, "[SimpleTrainer] model was changed to eval mode!"
         start = time.perf_counter()
         """
