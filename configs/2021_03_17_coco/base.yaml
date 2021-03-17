@@ -1,12 +1,12 @@
 _BASE_: "../Base-RCNN-FPN-APD.yaml"
 MODEL:
   ROI_MASK_HEAD:
-    INIT_ACTIVATED_MASK_HEAD: "standard"  # "standard", "custom"
+    INIT_ACTIVATED_MASK_HEAD: "custom"  # "standard", "custom"
     N_MASKS_PER_ROI: 2  # only relevant if using the custom mask head
-    MATCHING_LOSS: False
+    MATCHING_LOSS: True
   ROI_HEADS:
     NAME: "MultiROIHeadsAPD"  #  "StandardROIHeads", "MultiROIHeadsAPD"
-    NUM_CLASSES: 60
+    NUM_CLASSES: 80
   RESNETS:
     DEPTH: 50
 SOLVER:

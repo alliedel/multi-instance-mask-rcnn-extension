@@ -6,6 +6,7 @@ MODEL:
     MATCHING_LOSS: True
   ROI_HEADS:
     NAME: "MultiROIHeadsAPD"  #  "StandardROIHeads", "MultiROIHeadsAPD"
+    NUM_CLASSES: 60
   RESNETS:
     DEPTH: 50
 SOLVER:

@@ -1,14 +1,5 @@
 """
-The goal of :train_primary_secondary_on_full_coco: is to run primary-secondary mask training on COCO.
-We are changing as little as possible.  The only things we're making extra effort on compared to
-previous train so far are:
-- Good dataloader (with pinned memory)
-- Saving intermediate models
-- Running a 'smart' optimizer (borrowed from Mask R-CNN)
-
-Things left for other scripts:
-- Good parameter loading
-- Logging (text and tensorboard)
+Script to train a Multimask RCNN model on a dataset
 """
 import os
 import argparse

@@ -2,6 +2,7 @@ _BASE_: "../Base-RCNN-FPN-APD.yaml"
 MODEL:
   ROI_HEADS:
     NAME: "StandardROIHeads"  #  "StandardROIHeads", "MultiROIHeadsAPD"
+    NUM_CLASSES: 60
   RESNETS:
     DEPTH: 50
 SOLVER:
