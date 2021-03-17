@@ -11,7 +11,7 @@ while IFS= read -r line; do
     modelpth=""#"${line}/checkpoint.pth.tar"
     noparent="${cfgpth##*/}"
     basenm="${noparent%.yaml}"
-    datetime=`date +"%m-%d-%Y-%H-%M-%s"`
+    datetime=`date +"%Y-%m-%d-%H-%M-%s"`
     outst="/home/adelgior/data/slurm-logs/${datetime}-val-${basenm}"
     cmd="srun --gres=gpu:4 --job-name=$basenm -o $outst-job-%j.out -p long -t 48:00:00 bash ./val_bash_wrapper.sh --gpus 0,1,2,3 --trained-logdir $line &"
     echo "$cmd"

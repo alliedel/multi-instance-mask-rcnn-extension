@@ -46,7 +46,7 @@ for file in ${cfglist[@]}; do
     echo "Starting job for $file"
     noparent="${file##*/}"
     basenm="${noparent%.yaml}"
-    datetime=`date +"%m-%d-%Y-%H-%M-%s"`
+    datetime=`date +"%Y-%m-%d-%H-%M-%s"`
     outst="/home/adelgior/data/slurm-logs/${datetime}-${basenm}"
     echo "redirected output to file starting with:"
     echo $outst
