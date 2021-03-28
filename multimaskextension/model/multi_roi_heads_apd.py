@@ -151,6 +151,14 @@ class MultiROIHeadsAPD(StandardROIHeads):
                 # r,c of proposal, alternate gt_idx mapping.  For instance:
                 #   (0,0), (1,1), (1,3) means proposal 0 has alternate gt 0, proposal 1 has alternate gt 1, and proposal 3
                 #   has alternate gt 1.
+                # TODO(allie): This could cause problems, and should be made better in the
+                #  future (at the expense of computation).
+                #  1. Match quality is computed in terms of proposal boxes, not in terms of
+                #  masks!  Area of mask within box might be the better metric here.
+                #  2. The second-best-only match would be a very good restriction to
+                #  remove (should be able to match to *any* instance, not just the second-best in
+                #  terms of IOU with a proposal, or at least report if there was another option!)
+                #
                 # secondary_assignments = secondary_match_quality_matrix.nonzero()  # useful for tertiary, etc. assignments
                 second_best_assignments = secondary_match_quality_matrix.max(axis=0)
 

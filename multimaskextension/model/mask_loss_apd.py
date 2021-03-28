@@ -130,8 +130,9 @@ def maskwise_mask_rcnn_loss(pred_mask_logits, instances, gt_masks_raw: List[Poly
 def custom_mask_rcnn_loss(pred_mask_logits, instances, gt_masks_raw: List[PolygonMasks]):
     """
     CUSTOM version of the below description (original mask_rcnn_loss function).
-    If gt_masks == [i.gt_masks for i in instances], behavior is the same. We add this customization so we can give it
-    secondary groundtruth (which may exist in another field, and need reassignment)
+    If gt_masks == [i.gt_masks for i in instances], behavior is the same. We add this customization
+    so we can give it secondary groundtruth (which may exist in another field, and need
+    reassignment)
 
     Compute the mask prediction loss defined in the Mask R-CNN paper.
 
