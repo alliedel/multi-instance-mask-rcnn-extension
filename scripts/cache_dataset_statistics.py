@@ -38,7 +38,7 @@ def main():
              {'metadata': metadata,
               'semantic_class_vals': dataset_configured_for_stats.semantic_class_vals})
 
-    boxmask_intersections_file = os.path.join(coco_stats_cache_dir, 'boxmask_intersecions.npy')
+    boxmask_intersections_file = os.path.join(coco_stats_cache_dir, 'boxmask_intersections.npy')
     boxmask_intersections_cache = dataset_statistics.BoxMaskIntersectionsCOCO(
         dataset_configured_for_stats.semantic_class_vals,
         semantic_class_names=metadata.thing_classes, cache_file=boxmask_intersections_file)
