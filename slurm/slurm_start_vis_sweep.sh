@@ -10,7 +10,7 @@ while IFS= read -r line; do
     cfgpth="${line}/config.yaml"
     noparent="${cfgpth##*/}"
     basenm="${noparent%.yaml}"
-    datetime=`date +"%m-%d-%Y-%H-%M-%s"`
+    datetime=`date +"%Y-%m-%d-%H-%M-%s"`
     outst="/home/adelgior/data/slurm-logs/${datetime}-vis-${basenm}"
     cmd="srun --gres=gpu:1 --job-name=$basenm -o $outst-job-%j.out -p long -t 48:00:00 bash ./vis_bash_wrapper.sh --gpus 0 $line &"
     echo "$cmd"
