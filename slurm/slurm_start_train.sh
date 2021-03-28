@@ -50,5 +50,5 @@ for file in ${cfglist[@]}; do
     outst="/home/adelgior/data/slurm-logs/${datetime}-${basenm}"
     echo "redirected output to file starting with:"
     echo $outst
-    srun --gres=gpu:4 --job-name="$basenm" -o "$outst-job-%j.out" -p long bash ./train_bash_wrapper.sh --gpus 0,1,2,3 --config $file &
+    srun --gres=gpu:4 --job-name="$basenm" -o "$outst-job-%j.out" -p long -t 48:00:00 bash ./train_bash_wrapper.sh --gpus 0,1,2,3 --config $file &
 done
