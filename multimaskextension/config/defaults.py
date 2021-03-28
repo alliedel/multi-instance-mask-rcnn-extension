@@ -114,6 +114,9 @@ _C.DATALOADER.REPEAT_THRESHOLD = 0.0
 # if True, the dataloader will filter out images that have no associated
 # annotations at train time.
 _C.DATALOADER.FILTER_EMPTY_ANNOTATIONS = True
+# if "GeneralizedRepeatFactorTrainingSampler", file for the frequencies the repeat factor is
+# computed on.
+_C.DATALOADER.FILE_FOR_REPEAT_FACTOR = "output/cache/coco_stats/boxmask_intersections.npy"
 
 # ---------------------------------------------------------------------------- #
 # Backbone options

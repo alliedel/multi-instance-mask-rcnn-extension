@@ -1,0 +1,5 @@
+_BASE_: "./2021_03_17_coco/base.yaml"
+DATALOADER:
+  SAMPLER_TRAIN: "GeneralizedRepeatFactorTrainingSampler"
+  FILE_FOR_REPEAT_FACTOR: "output/cache/coco_stats/boxmask_intersections.npy"
+  REPEAT_THRESHOLD: 0.01
