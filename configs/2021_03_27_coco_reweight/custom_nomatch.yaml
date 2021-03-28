@@ -1,0 +1,8 @@
+_BASE_: "./base.yaml"
+MODEL:
+  ROI_HEADS:
+    NAME: "MultiROIHeadsAPD"
+  ROI_MASK_HEAD:
+    INIT_ACTIVATED_MASK_HEAD: "custom"
+    N_MASKS_PER_ROI: 2
+    MATCHING_LOSS: False
