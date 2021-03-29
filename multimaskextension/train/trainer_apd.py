@@ -348,6 +348,7 @@ class Trainer_APD(TrainerBase):
 
         results = OrderedDict()
         for idx, dataset_name in enumerate(cfg.DATASETS.TEST):
+            logger.info('Building test loader')
             data_loader = cls.build_test_loader(cfg, dataset_name)
             # When evaluators are passed in as arguments,
             # implicitly assume that evaluators can be created before data_loader.
