@@ -1,33 +1,17 @@
 import argparse
+import glob
+import json
+import pickle
+
 import os
 import torch
-import json
-
-from tabulate import tabulate
-
-from multimaskextension.train import script_utils
-import detectron2.utils.comm as comm
-from detectron2.data import MetadataCatalog
-from detectron2.evaluation import (
-    CityscapesEvaluator,
-    COCOEvaluator,
-    COCOPanopticEvaluator,
-    DatasetEvaluators,
-    LVISEvaluator,
-    PascalVOCDetectionEvaluator,
-    SemSegEvaluator,
-    verify_results,
-)
-
 from detectron2.engine import DefaultTrainer
 
-# Don't know how to avoid importing this
-from multimaskextension.model import multi_roi_heads_apd
-from multimaskextension.data import registryextension
-from multimaskextension.train.trainer_apd import Trainer_APD
 from multimaskextension.analysis.multimaskevaluator import MultiMaskCOCOEvaluator
-import pickle
-import glob
+from multimaskextension.train import script_utils
+# Don't know how to avoid importing this
+from multimaskextension.train.trainer_apd import Trainer_APD
+
 
 def dbprint(*args, **kwargs):
     print(*args, **kwargs)
@@ -38,17 +22,19 @@ def build_evaluator(cfg, dataset_name, output_folder=None, distributed=True):
         output_folder = os.path.join(cfg.OUTPUT_DIR, f"inference_{cfg.DATASETS.TEST}")
     # default inference name
     mask_names = ['pred_masks']
-    if cfg.MODEL.ROI_MASK_HEAD.INIT_ACTIVATED_MASK_HEAD != 'standard':
+    if cfg.MODEL.ROI_HEADS.NAME == "MultiROIHeadsAPD" \
+            and cfg.MODEL.ROI_MASK_HEAD.INIT_ACTIVATED_MASK_HEAD == 'custom':
         mask_names.append('pred_masks1')
         mask_names.append('pred_masks2')
-    evaluators = [MultiMaskCOCOEvaluator(dataset_name, cfg, distributed, output_folder, mask_names=mask_names)]
-    if len(evaluators) == 1:
-        return evaluators[0]
-    return evaluators
+    print('Evaluating on mask_names: ', mask_names)
+    evaluator = MultiMaskCOCOEvaluator(dataset_name, cfg, distributed, output_folder,
+                                       mask_names=mask_names)
+    return evaluator
 
 
 def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=None,
-         overwrite_preds=False, cpu=False, val_dataset=None, save_all_predictions=False):
+         overwrite_preds=False, overwrite_cocoeval=False, cpu=False, val_dataset=None,
+         save_all_predictions=False):
     assert os.path.exists(trained_logdir), trained_logdir
     config_filepath = config_filepath or os.path.join(trained_logdir, 'config.yaml')
     assert os.path.exists(config_filepath), config_filepath
@@ -66,12 +52,14 @@ def main(trained_logdir, rel_model_pth='checkpoint.pth.tar', config_filepath=Non
     train_basename = os.path.basename(trained_logdir.strip(os.path.sep))
 
     for checkpoint in checkpoints:
-        val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, save_all_predictions, train_basename,
+        val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds,
+                              overwrite_cocoeval, save_all_predictions, train_basename,
                               val_dataset)
 
 
-def val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, save_all_predictions, train_basename,
-                          val_dataset):
+def val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds,
+                          overwrite_cocoeval, save_all_predictions,
+                          train_basename, val_dataset):
     # I. Load pre-existing Mask R-CNN model
     cfg = script_utils.get_custom_maskrcnn_cfg(config_filepath, weights_checkpoint=checkpoint)
     if cpu:
@@ -87,8 +75,8 @@ def val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, sav
         else torch.load(checkpoint)
     model.load_state_dict(state['model_state_dict'])
     # e. Load full dataset
-    print('CFG: ')
-    print(cfg)
+    # print('CFG: ')
+    # print(cfg)
     assert len(cfg.DATASETS.TRAIN) == 1
     dataloaders = {
         s: DefaultTrainer.build_test_loader(
@@ -107,9 +95,15 @@ def val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, sav
     config_outpath = os.path.join(outdir, "config_resume.yaml")
     with open(config_outpath, "w") as f:
         f.write(cfg.dump())
-    evaluators = build_evaluator(cfg, dataset_name=cfg.DATASETS.TEST[0], output_folder=outdir, distributed=False)
+    evaluator = build_evaluator(cfg, dataset_name=cfg.DATASETS.TEST[0], output_folder=outdir,
+                                distributed=False)
+    if os.path.exists(evaluator.cocoeval_outpath) and not overwrite_cocoeval:
+        print(f"{evaluator.cocoeval_outpath} already exists.  Not rerunning without "
+              f"overwrite_cocoeval")
+        return
+
     print('Testing')
-    results = Trainer_APD.test(cfg, model, evaluators)
+    results = Trainer_APD.test(cfg, model, [evaluator])
     fname = os.path.join(outdir, 'results.pkl')
     print('Check results at (and its variants):\n{}'.format(fname))
     pickle.dump(results, open(fname, 'wb'))
@@ -142,7 +136,8 @@ def val_single_checkpoint(checkpoint, config_filepath, cpu, overwrite_preds, sav
         for s in ('val', 'train'):
             if not os.path.exists(filelists[s]):  # generate filelist
                 identifiers = script_utils.get_image_identifiers(dataloaders[s],
-                                                                 identifier_strings=('file_name', 'image_id'))
+                                                                 identifier_strings=(
+                                                                     'file_name', 'image_id'))
                 list_of_files = [idnt['file_name'] for idnt in identifiers]
                 with open(filelists[s], 'w') as fid:
                     fid.write('\n'.join(list_of_files))
@@ -156,11 +151,15 @@ def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--trained-logdir', required=True)
     parser.add_argument('--overwrite-preds', required=False, default=None)
+    parser.add_argument('--overwrite-cocoeval', required=False, default=False)
     parser.add_argument('--rel-model-pth', required=False, default='checkpoint.pth.tar',
-                        help='filename ending in .pth.tar.  If a directory, will run inference on all models in '
+                        help='filename ending in .pth.tar.  If a directory, will run inference on '
+                             'all models in '
                              'directory.')
-    parser.add_argument('--val-dataset', required=False, default=None, type=lambda arg: arg.split(','),
-                        help='Give comma-separated list of validation datasets.  Default: The dataset specified in '
+    parser.add_argument('--val-dataset', required=False, default=None,
+                        type=lambda arg: arg.split(','),
+                        help='Give comma-separated list of validation datasets.  Default: The '
+                             'dataset specified in '
                              'cfg.DATASETS.TEST')
     parser.add_argument('--config-filepath', required=False, default=None,
                         help='Will assume {logdir}/config.yaml')
@@ -171,7 +170,8 @@ def get_parser():
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    # trained_logdir = '/home/allie/afs_directories/espresso/code/multi-instance-mask-rcnn-extension/
+    # trained_logdir = '/home/allie/afs_directories/espresso/code/multi-instance-mask-rcnn
+    # -extension/
     # output/logs/train/train_primary_secondary_full_2020-12-28-225457_VCS-daaf4a9_MAX_ITR
     # -1000000_HEAD_TYPE-custom/'
     main(**args.__dict__)

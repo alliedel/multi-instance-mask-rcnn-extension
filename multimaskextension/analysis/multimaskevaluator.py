@@ -107,7 +107,14 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
 
     @property
     def mask_names_agg(self):
-        return [nm for nm in self.mask_names if nm != 'pred_masks']
+        if len(self.mask_names) == 1:
+            return self.mask_names
+        else:
+            return [nm for nm in self.mask_names if nm != 'pred_masks']
+
+    @property
+    def cocoeval_outpath(self):
+        return os.path.join(self._output_dir, "cocoevals.pth")
 
     def evaluate(self):
         # I. Prepare predictions
@@ -140,12 +147,13 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
 
         # II. Per-mask evaluation & fill predictions['instances'][inst_idx]['area'] and ['id']
         log_and_print(self._logger, "Evaluating multimask predictions")
+        log_and_print(self._logger, f"\n\n (Will save to {self.cocoeval_outpath} when done)")
         predictions_per_mask_type = self._predictions_per_mask_type
         all_individual_results, coco_evals_individual = self.eval_predictions_multimask(
             predictions_per_mask_type, self._coco_api)
 
-        if len(self.mask_names) <= 1:
-            return all_individual_results, coco_evals_individual
+        # if len(self.mask_names) <= 1:
+        #     return all_individual_results, coco_evals_individual
 
         if self.eval_agg_masks:
             log_and_print(self._logger, "\n\n *** Running aggregated mask evaluation")
@@ -159,7 +167,9 @@ class MultiMaskCOCOEvaluator(COCOEvaluator):
         all_coco_evals = coco_evals_individual
         all_coco_evals.update(coco_evals_agg)
         torch.save(all_results, os.path.join(self._output_dir, "statresults.pth"))
-        torch.save(all_coco_evals, os.path.join(self._output_dir, "cocoevals.pth"))
+        torch.save(all_coco_evals, self.cocoeval_outpath)
+        log_and_print(self._logger, f"\n\n *** Saved {self.cocoeval_outpath}")
+
         return copy.deepcopy(all_results), copy.deepcopy(all_coco_evals)
 
     def verify_and_remove_instances(self, mask_idxs_to_remove_per_img, predictions_to_remove_from, ref_preds=None):
