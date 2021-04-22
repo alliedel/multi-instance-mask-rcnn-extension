@@ -10,6 +10,7 @@ class MyVisualizer(Visualizer):
     Allie made this class to handle solely instance segmentation and be able to load
     predictions and gts in the same COCO json format and easily visualize.
     """
+
     def __init__(self, img_rgb, metadata, scale=1.0, instance_mode=ColorMode.IMAGE):
         """
         Args:
@@ -22,11 +23,31 @@ class MyVisualizer(Visualizer):
         """
         super().__init__(img_rgb, metadata, scale, instance_mode)
 
-    def get_labels(self, instance_annos):
+    def get_labels(self, instance_annos, annos_use_contiguous=False):
+        """
+        The annotations should not use the contiguous ids (they should output the thing class
+        label in non-contiguous form, rather than the convenient remapping the metadata
+        provides).  But if they do (directly from the model, for instance), we'll index class
+        names that way.
+        """
         classes = [x["category_id"] for x in instance_annos]
-        class_names = self.metadata.get("thing_classes", None)
         scores = [x['score'] for x in instance_annos] if 'score' in instance_annos[0] else None
         # Pred version
+        thing_class_names = self.metadata.get("thing_classes", None)
+        if annos_use_contiguous:
+            thing_class_ids = list(self.metadata.get("thing_dataset_id_to_contiguous_id",
+                                                     None).values())
+        else:
+            thing_class_ids = list(self.metadata.get("thing_dataset_id_to_contiguous_id",
+                                                   None).keys())
+
+        unique_pred_labels = sorted(list(np.unique(classes)))
+        assert all(x in thing_class_ids for x in unique_pred_labels),\
+            (thing_class_ids, unique_pred_labels)
+
+        class_names = {
+            i: v
+            for i, v in zip(thing_class_ids, thing_class_names)}
         labels = _create_text_labels(classes, scores, class_names)
         return labels
 
@@ -54,7 +75,8 @@ class MyVisualizer(Visualizer):
             else:
                 keypts = None
             if 'bbox_mode' in annos[0]:
-                boxes = [BoxMode.convert(x["bbox"], x["bbox_mode"], BoxMode.XYXY_ABS) for x in annos]
+                boxes = [BoxMode.convert(x["bbox"], x["bbox_mode"], BoxMode.XYXY_ABS) for x in
+                         annos]
             else:
                 boxes = [x["bbox"] for x in annos]
             labels = self.get_labels(annos)

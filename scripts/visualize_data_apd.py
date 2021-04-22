@@ -43,7 +43,8 @@ def parse_args(in_args=None):
                         help="dataset name from registry, or set to 'train' or 'val' to defaults "
                              "to cfg.DATASETS.TRAIN")
     parser.add_argument("--config-file", default="", metavar="FILE", help="path to config file")
-    parser.add_argument("--predictions-json", default="", metavar="json file representing predictions in COCO format",
+    parser.add_argument("--predictions-json", default="", metavar="json file representing "
+                                                                  "predictions in COCO format",
                         help="path to predictions file if source is set to prediction")
     parser.add_argument("--output-dir", default="./", help="path to output directory")
     parser.add_argument("--show", action="store_true", help="show output in a window")
