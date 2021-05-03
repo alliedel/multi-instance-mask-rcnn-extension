@@ -50,8 +50,8 @@ def get_matching_xent_losses_single_img(instances, n_masks_per_roi, pred_mask_lo
         instances_per_image.proposal_boxes.tensor, mask_side_len).to(device=pred_mask_logits.device)
     gt_pairs = [torch.stack([g1, g2]) for g1, g2 in zip(gt_1, gt_2)]
     gt_classes = instances_per_image.gt_classes.to(dtype=torch.int64)
-    pred_mask_pairs = [[p[i::n_masks_per_roi, :, :][gt_class] for i in range(n_masks_per_roi)] for p, gt_class in
-                       zip(pred_mask_logits, gt_classes)]
+    pred_mask_pairs = [[p[i::n_masks_per_roi, :, :][gt_class] for i in range(n_masks_per_roi)]
+                       for p, gt_class in zip(pred_mask_logits, gt_classes)]
     for idx, (gt_pair, pred_pair) in enumerate(zip(gt_pairs, pred_mask_pairs)):
         xent_losses = torch.zeros((len(gt_pair), len(pred_pair)), device=pred_mask_logits.device)
         for i, pred in enumerate(pred_pair):
