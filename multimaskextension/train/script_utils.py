@@ -535,7 +535,8 @@ def visualize_instancewise_predictions(img, instance_outputs, cfg, exporter, tag
     n_instances = len(instance_outputs)
     for i in range(n_instances):
         instance = instance_outputs[[i]]
-        vis_utils.show_prediction(img, {'instances': instance}, metadata=MetadataCatalog.get(cfg.DATASETS.TRAIN[0]))
+        vis_utils.show_prediction(img, {'instances': instance},
+                                  metadata=MetadataCatalog.get(cfg.DATASETS.TRAIN[0]))
         exporter.export_gcf(tag + f'_inst{i}')
 
 
