@@ -1,8 +1,0 @@
-_BASE_: "./base.yaml"
-MODEL:
-  ROI_HEADS:
-    NAME: "StandardROIHeads"
-DATALOADER:
-  SAMPLER_TRAIN: "GeneralizedRepeatFactorTrainingSampler"
-  FILE_FOR_REPEAT_FACTOR: "output/cache/coco_stats/boxmask_intersections.npy"
-  REPEAT_THRESHOLD: 1.0
