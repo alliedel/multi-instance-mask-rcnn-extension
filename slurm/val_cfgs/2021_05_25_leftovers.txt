@@ -1,0 +1,1 @@
+--trained-logdir output/logs/train/train_2021-05-12-194453_VCS-af9d7dd_MAX_ITR-100000_HEAD_TYPE-custom_MATCH-1/ --rel-model-pth model_checkpoints --val-dataset coco_2017_val

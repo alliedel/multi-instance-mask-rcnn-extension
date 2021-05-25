@@ -17,4 +17,4 @@ echo "$cmd"
 
 $cmd
 
-echo "Slurm job complete"
+echo "Slurm job complete\n"
