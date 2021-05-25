@@ -1,0 +1,12 @@
+_BASE_: "./base.yaml"
+MODEL:
+  ROI_HEADS:
+    NAME: "MultiROIHeadsAPD"
+  ROI_MASK_HEAD:
+    INIT_ACTIVATED_MASK_HEAD: "custom"
+    N_MASKS_PER_ROI: 2
+    MATCHING_LOSS: False
+DATALOADER:
+  SAMPLER_TRAIN: "GeneralizedRepeatFactorTrainingSampler"
+  FILE_FOR_REPEAT_FACTOR: "output/cache/coco_stats/boxmask_intersections.npy"
+  REPEAT_THRESHOLD: 0.1
