@@ -97,3 +97,44 @@ class MyVisualizer(Visualizer):
         if sem_seg is not None:
             self.draw_sem_seg(sem_seg, area_threshold=0, alpha=0.5)
         return self.output
+
+    @staticmethod
+    def json_to_dicts(predictions, iminfo, assumed_bbox_mode=BoxMode.XYXY_ABS):
+        """
+        input:
+            predictions: loaded from json; is in COCO format: one entry per instance
+        output:
+            predictions_as_dicts: list of per-image dicts of instances in the form
+            {'file_name': 'data/datasets/d2s/images/D2S_025300.jpg',
+             'height': 1440,
+             'width': 1920,
+             'image_id': 25300,
+             'annotations': [{'iscrowd': 0,
+               'bbox': [702.0, 0.0, 721.0, 755.0],
+               'category_id': 40,
+               'segmentation': {'counts': 'PVkn05k\\14L1O1O1je0',
+                'size': [1440, 1920]},
+               'bbox_mode': <BoxMode.XYWH_ABS: 1>},
+
+        """
+        predictions_as_dicts = {
+            anno['image_id']:
+                {
+                    'file_name': anno['file_name'],
+                    'height': anno['height'],
+                    'width': anno['width'],
+                    'image_id': anno['image_id'],
+                    'annotations': []
+                }
+            for anno in iminfo
+        }
+        # we're going to fill it as a dictionary; will convert to list.
+        for p in predictions:
+            image_id = p['image_id']
+            assert image_id in predictions_as_dicts, ValueError(
+                f"predictions didn\'t match the file info from the "
+                f"dataset ({image_id} in predictions)")
+            if 'bbox_mode' not in p:
+                p['bbox_mode'] = assumed_bbox_mode
+            predictions_as_dicts[image_id]['annotations'].append(p)
+        return list(predictions_as_dicts.values())
