@@ -7,7 +7,9 @@ import local_pyutils
 import torch
 
 # We do this to force the multiroiheads to be added to the registry
+# noinspection PyUnresolvedReferences
 from multimaskextension.model import multi_roi_heads_apd
+# noinspection PyUnresolvedReferences
 from multimaskextension.data import registryextension
 
 from multimaskextension.train import script_utils
