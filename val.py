@@ -10,6 +10,10 @@ from detectron2.engine import DefaultTrainer
 from multimaskextension.analysis.multimaskevaluator import MultiMaskCOCOEvaluator
 from multimaskextension.train import script_utils
 # Don't know how to avoid importing this
+# noinspection PyUnresolvedReferences
+from multimaskextension.model import multi_roi_heads_apd
+# noinspection PyUnresolvedReferences
+from multimaskextension.data import registryextension
 from multimaskextension.train.trainer_apd import Trainer_APD
 
 
