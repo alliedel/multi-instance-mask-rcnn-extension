@@ -1,0 +1,4 @@
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-23
+-185542_VCS-64d87d7_MATCH-0 --val-dataset coco_2017_debug_val
+/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_primary_secondary_full_2021-01-23
+-185542_VCS-64d87d7_MATCH-0 --val-dataset coco_2017_val
