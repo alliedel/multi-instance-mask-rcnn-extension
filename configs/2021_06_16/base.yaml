@@ -1,0 +1,24 @@
+_BASE_: "../Base-RCNN-FPN-APD.yaml"
+MODEL:
+  ROI_MASK_HEAD:
+    INIT_ACTIVATED_MASK_HEAD: "custom"  # "standard", "custom"
+    N_MASKS_PER_ROI: 2  # only relevant if using the custom mask head
+    MATCHING_LOSS: False
+  ROI_HEADS:
+    NAME: "MultiROIHeadsAPD"  #  "StandardROIHeads", "MultiROIHeadsAPD"
+    NUM_CLASSES: 80
+  RESNETS:
+    DEPTH: 50
+SOLVER:
+  STEPS: (210000, 250000)
+  MAX_ITER: 100000
+  IMS_PER_BATCH: 8
+DATASETS:
+  TRAIN: ("coco_2017_train",)
+  TEST: ("coco_2017_val",)
+DATALOADER:
+  SAMPLER_TRAIN: "GeneralizedRepeatFactorTrainingSampler"
+  FILE_FOR_REPEAT_FACTOR: "output/cache/coco_stats/boxmask_intersections.npy"
+  REPEAT_THRESHOLD: 0.02
+#cfg.MODEL.RPN.BBOX_REG_LOSS_TYPE = "smooth_l1"
+#cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = "smooth_l1"

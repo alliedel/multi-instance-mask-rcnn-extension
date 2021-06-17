@@ -1,1 +1,2 @@
+--trained-logdir output/logs/train/dummytest --rel-model-pth state_dict_trainerapd_170.pt --val-dataset coco_2017_val
 --trained-logdir output/logs/train/train_2021-05-12-194453_VCS-af9d7dd_MAX_ITR-100000_HEAD_TYPE-custom_MATCH-1/ --rel-model-pth model_checkpoints --val-dataset coco_2017_val
