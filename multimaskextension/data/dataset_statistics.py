@@ -461,6 +461,12 @@ class BoxMaskIntersectionsCOCO(DatasetStatisticCacheInterface):
 
     def derive_stats_tensor_from_detailed_stats(self, detailed_counts_dict_lst,
                                                 thresh_box_pixels=8):
+        """
+        Convert list of dicts (one dict per image) into tensor of size NxSxS,
+        where N = # images, S = # semantic classes.
+        mask_overlaps_per_sem_cls_box_mask[i,j,k] = # overlaps within image i between a box of
+        semantic class j and a mask of semantic class k.
+        """
         n_images = len(detailed_counts_dict_lst)
         mask_overlaps_per_sem_cls_box_mask = torch.zeros((n_images, len(self.semantic_class_vals),
                                                           len(self.semantic_class_vals)),

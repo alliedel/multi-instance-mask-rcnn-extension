@@ -127,7 +127,7 @@ class Trainer_APD(TrainerBase):
         else:
             raise NotImplementedError
             self.data_loader = self.val_data_loader
-        self._data_loader_iter = iter(self.train_data_loader)
+        self._data_loader_iter = iter(self.data_loader)
 
         # For training, wrap with DDP. But don't need this for inference.
         if comm.get_world_size() > 1:
@@ -230,7 +230,11 @@ class Trainer_APD(TrainerBase):
         If your want to do something with the losses, you can wrap the model.
         """
         if self.cfg.GLOBAL.NOOP:
-            return
+            with open('/tmp/imageids.txt', 'a') as f:
+                for i in [d['image_id'] for d in data]:
+                    f.write(f"{i}\n")
+                    print(f"{i}\n")
+
         loss_dict = self.model(data)
         losses = sum(loss for loss in loss_dict.values())
         self._detect_anomaly(losses, loss_dict)
