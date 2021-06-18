@@ -13,7 +13,7 @@ while IFS= read -r line; do
     basenm="${noparent%.yaml}"
     datetime=`date +"%Y-%m-%d-%H-%M-%s"`
     outst="/home/adelgior/data/slurm-logs/${datetime}-val-${basenm}"
-    cmd="srun --gres=gpu:4 --job-name=$basenm -o $outst-job-%j.out -p long -t 48:00:00 bash ./val_bash_wrapper.sh --gpus 0,1,2,3 --trained-logdir $line &"
+    cmd="srun --gres=gpu:4 --job-name=$basenm -o $outst-job-%j.out -p long -t 48:00:00 bash ./val_bash_wrapper.sh --gpus 0,1,2,3 $line &"
     echo "$cmd"
     eval "$cmd"
     echo "redirected output to file starting with:"
