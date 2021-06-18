@@ -49,3 +49,4 @@ INPUT:
 DATALOADER:
   # proposals are part of the dataset_dicts, and take a lot of RAM
   NUM_WORKERS: 4
+SEED: 1

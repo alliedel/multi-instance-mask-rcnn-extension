@@ -101,6 +101,10 @@ _C.DATASETS.PRECOMPUTED_PROPOSAL_TOPK_TEST = 1000
 # DataLoader
 # -----------------------------------------------------------------------------
 _C.DATALOADER = CN()
+
+# APD added
+_C.DATALOADER.SEED = 11
+
 # Number of data loading threads
 _C.DATALOADER.NUM_WORKERS = 4
 # If True, each batch should contain only images for which the aspect ratio
@@ -319,6 +323,8 @@ _C.MODEL.ROI_MASK_HEAD.CUSTOM_NAME = "CustomMaskRCNNConvUpsampleHeadAPD"  # Adde
 _C.MODEL.ROI_MASK_HEAD.INIT_ACTIVATED_MASK_HEAD = "standard"
 _C.MODEL.ROI_MASK_HEAD.N_MASKS_PER_ROI = 1
 _C.MODEL.ROI_MASK_HEAD.MATCHING_LOSS = True
+_C.MODEL.ROI_MASK_HEAD.WEIGHTS_RANDOM_INIT_PRIMARY = True  # Used for both binary and multi-mask
+_C.MODEL.ROI_MASK_HEAD.WEIGHTS_RANDOM_INIT_SECONDARY = True  # Used for only multi-mask
 
 _C.MODEL.ROI_MASK_HEAD.NAME = "MaskRCNNConvUpsampleHead"
 _C.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 14
