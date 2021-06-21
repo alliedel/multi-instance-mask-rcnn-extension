@@ -30,12 +30,14 @@ def findDiff(d1, d2, stack):
     for k, v in d1.items():
         if k not in d2:
             yield stack + ([k] if k else [])
-        if isinstance(v, dict):
-            for c in findDiff(d1[k], d2[k], [k]):
-                yield stack + c
-        else:  # leaf
-            if d1[k] != d2[k]:
-                yield stack + [k]
+        else:
+            if isinstance(v, dict):
+                assert isinstance(d2[k], dict)
+                for c in findDiff(d1[k], d2[k], [k]):
+                    yield stack + c
+            else:  # leaf
+                if d1[k] != d2[k]:
+                    yield stack + [k]
 
 
 def get_value_from_cfg(cfg, klst):
@@ -86,7 +88,10 @@ def inplace_augment_df_with_cfg_columns(df, auto_diffcfg_columns=True, manual_cf
 
     for col_name, cfg_key in cfg_cols_to_keys.items():
         def f(x):  # linter doesn't want this as lambda for some reason
-            return get_value_from_cfg(all_cfgs[x], cfg_key)
+            try:
+                return get_value_from_cfg(all_cfgs[x], cfg_key)
+            except KeyError:
+                return None
 
         df[col_name] = df[cf_name].apply(f)
 
