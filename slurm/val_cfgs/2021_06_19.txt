@@ -1,0 +1,6 @@
+ --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-16-103924_VCS-f165af5_MAX_ITR-100000_HEAD_TYPE-custom_MATCH-0
+ --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-16-154242_VCS-f165af5_MAX_ITR-100000_HEAD_TYPE-custom_MATCH-0
+ --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-17-095941_VCS-2dbaca2_MAX_ITR-100000_HEAD_TYPE-None
+ --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-17-220419_VCS-2dbaca2_MAX_ITR-100000_HEAD_TYPE-None
+ --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-18-121620_VCS-2dbaca2_MAX_ITR-100000_HEAD_TYPE-None
+
