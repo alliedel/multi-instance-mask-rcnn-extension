@@ -3,6 +3,7 @@ MODEL:
   ROI_MASK_HEAD:
     MATCHING_LOSS: False
     INIT_ACTIVATED_MASK_HEAD: "custom"  # "standard", "custom"
+    N_MASKS_PER_ROI: 2
   ROI_HEADS:
     NAME: "MultiROIHeadsAPD"  #  "StandardROIHeads", "MultiROIHeadsAPD"
     NUM_CLASSES: 80
