@@ -113,7 +113,7 @@ def custom_visualizations(df_segm):
     x_sub_name = 'itr'
     x_sub_unique = sorted(list(df_tmp[x_sub_name].unique()), key=lambda x: int(x))
     x_super_unique = sorted(list(df_tmp[x_super_name].unique()))
-    x = [(x1, x2) for x1 in x_super_unique for x2 in x_sub_unique]
+    x = [(x1, x2) for x1     in x_super_unique for x2 in x_sub_unique]
     factor_range = FactorRange(*x)
     palette = palettes.cividis(len(x_sub_unique))
     cmap = palette if len(x_sub_unique) <= len(palette) else Turbo256

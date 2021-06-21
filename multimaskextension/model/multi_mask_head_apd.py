@@ -102,8 +102,6 @@ class CustomMaskRCNNConvUpsampleHeadAPD(nn.Module):
     A custom mask head that produces more than one instance per thing class.  Similar to
     MaskRCNNConvUpsampleHead.
     """
-    num_instances_per_class = 2
-
     def __init__(self, cfg, input_shape: ShapeSpec):
         """
         The following attributes are parsed from config:
@@ -120,6 +118,8 @@ class CustomMaskRCNNConvUpsampleHeadAPD(nn.Module):
         num_conv = cfg.MODEL.ROI_MASK_HEAD.NUM_CONV
         input_channels = input_shape.channels
         cls_agnostic_mask = cfg.MODEL.ROI_MASK_HEAD.CLS_AGNOSTIC_MASK
+        self.num_instances_per_class = cfg.MODEL.ROI_MASK_HEAD.N_MASKS_PER_ROI
+        assert self.num_instances_per_class == 2, NotImplementedError
         # fmt: on
 
         self.conv_norm_relus = []
