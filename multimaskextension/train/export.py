@@ -22,7 +22,8 @@ class ExportConfig(object):
 
 
 class ModelHistorySaver(object):
-    def __init__(self, model_checkpoint_dir, interval_validate, max_n_saved_models=20, max_n_iterations=100000):
+    def __init__(self, model_checkpoint_dir, interval_validate, max_n_saved_models=20,
+                 max_n_iterations=100000):
         assert np.mod(max_n_saved_models, 2) == 0, 'Max_n_saved_models must be even'
         self.model_checkpoint_dir = model_checkpoint_dir
         if not os.path.exists(model_checkpoint_dir):
@@ -35,13 +36,15 @@ class ModelHistorySaver(object):
         self.last_model_saved = None
 
     def get_list_of_checkpoint_files(self):
-        return [os.path.join(self.model_checkpoint_dir, f) for f in sorted(os.listdir(self.model_checkpoint_dir))]
+        return [os.path.join(self.model_checkpoint_dir, f) for f in
+                sorted(os.listdir(self.model_checkpoint_dir))]
 
     def get_latest_checkpoint_file(self):
         return self.get_list_of_checkpoint_files()[-1]
 
     def get_model_filename_from_iteration(self, i):
-        return os.path.join(self.model_checkpoint_dir, 'model_' + self.itr_format.format(i) + '.pth.tar')
+        return os.path.join(self.model_checkpoint_dir,
+                            'model_' + self.itr_format.format(i) + '.pth.tar')
 
     def get_iteration_from_model_filename(self, model_filename):
         itr_as_06d = os.path.basename(model_filename).split('_')[1].split('.')[0]
@@ -50,7 +53,8 @@ class ModelHistorySaver(object):
 
     def save_model_to_history(self, current_itr, checkpoint_file_src, clean_up_checkpoints=True):
         if np.mod(current_itr, self.adaptive_save_model_every * self.interval_validate) == 0:
-            shutil.copyfile(checkpoint_file_src, self.get_model_filename_from_iteration(current_itr))
+            shutil.copyfile(checkpoint_file_src,
+                            self.get_model_filename_from_iteration(current_itr))
             self.last_model_saved = self.get_model_filename_from_iteration(current_itr)
             if clean_up_checkpoints:
                 self.clean_up_checkpoints()
@@ -60,16 +64,19 @@ class ModelHistorySaver(object):
 
     def clean_up_checkpoints(self):
         """
-        Cleans out history to keep only a small number of models; always ensures we keep the first and most recent.
+        Cleans out history to keep only a small number of models; always ensures we keep the
+        first and most recent.
         """
         most_recent_file = self.get_latest_checkpoint_file()
         most_recent_itr = self.get_iteration_from_model_filename(most_recent_file)
         n_vals_so_far = most_recent_itr / self.interval_validate
         if (n_vals_so_far / self.adaptive_save_model_every) >= (self.max_n_saved_models):
             while (n_vals_so_far / self.adaptive_save_model_every) >= self.max_n_saved_models:
-                self.adaptive_save_model_every *= 2  # should use ceil, log2 to compute instead (this is hacky)
+                self.adaptive_save_model_every *= 2  # should use ceil, log2 to compute instead (
+                # this is hacky)
             iterations_to_keep = list(range(0, most_recent_itr + self.interval_validate,
-                                            self.adaptive_save_model_every * self.interval_validate))
+                                            self.adaptive_save_model_every *
+                                            self.interval_validate))
             if most_recent_itr not in iterations_to_keep:
                 iterations_to_keep.append(most_recent_itr)
             for j in iterations_to_keep:  # make sure the files we assume exist actually exist
@@ -81,7 +88,8 @@ class ModelHistorySaver(object):
                 iteration_number = self.get_iteration_from_model_filename(model_file)
                 if iteration_number not in iterations_to_keep:
                     os.remove(model_file)
-            assert len(self.get_list_of_checkpoint_files()) <= (self.max_n_saved_models + 1), 'DebugError'
+            assert len(self.get_list_of_checkpoint_files()) <= (
+                    self.max_n_saved_models + 1), 'DebugError'
 
 
 def log(num_or_vec, base):
@@ -99,7 +107,8 @@ class ConservativeExportDecider(object):
         self.power = 2  # 3
 
     def get_export_iteration_list(self, max_iterations):
-        return [(x * self.base_interval) ** 3 for x in range(0, np.ceil(log(max_iterations, 3)) + 1)]
+        return [(x * self.base_interval) ** 3 for x in
+                range(0, np.ceil(log(max_iterations, 3)) + 1)]
 
     @property
     def next_export_iteration(self):
@@ -107,7 +116,8 @@ class ConservativeExportDecider(object):
 
     @property
     def current_export_iteration(self):
-        return None if self.n_previous_exports == 0 else self.get_item_in_sequence(self.n_previous_exports - 1)
+        return None if self.n_previous_exports == 0 else self.get_item_in_sequence(
+            self.n_previous_exports - 1)
 
     def get_item_in_sequence(self, index):
         return self.base_interval * (index ** self.power)
@@ -118,7 +128,8 @@ class ConservativeExportDecider(object):
                 while iteration > self.get_item_in_sequence(self.n_previous_exports):
                     self.n_previous_exports += 1
             else:
-                print(Warning('Missed an export at iteration {}'.format(self.next_export_iteration)))
+                print(
+                    Warning('Missed an export at iteration {}'.format(self.next_export_iteration)))
                 while iteration > self.get_item_in_sequence(self.n_previous_exports):
                     self.n_previous_exports += 1
 
@@ -170,7 +181,8 @@ class TrainerExporter(object):
         self.model_history_saver = ModelHistorySaver(model_checkpoint_dir=model_checkpoint_dir,
                                                      interval_validate=self.export_config.interval_validate,
                                                      max_n_saved_models=self.export_config.max_n_saved_models)
-        self.conservative_export_decider = ConservativeExportDecider(base_interval=self.export_config.interval_validate)
+        self.conservative_export_decider = ConservativeExportDecider(
+            base_interval=self.export_config.interval_validate)
 
     @property
     def instance_problem_path(self):
@@ -195,7 +207,8 @@ class TrainerExporter(object):
             log = map(str, log)
             f.write(','.join(log) + '\n')
 
-    def save_checkpoint(self, epoch, iteration, model, optimizer, best_mean_iu, mean_iu, out_dir=None):
+    def save_checkpoint(self, epoch, iteration, model, optimizer, best_mean_iu, mean_iu,
+                        out_dir=None):
         out_name = 'checkpoint.pth.tar'
         out_dir = out_dir or os.path.join(self.out_dir)
         checkpoint_file = os.path.join(out_dir, out_name)
@@ -217,13 +230,15 @@ class TrainerExporter(object):
                                                        clean_up_checkpoints=True)
         return checkpoint_file
 
-    def copy_checkpoint_as_best(self, current_checkpoint_file, out_dir=None, out_name='model_best.pth.tar'):
+    def copy_checkpoint_as_best(self, current_checkpoint_file, out_dir=None,
+                                out_name='model_best.pth.tar'):
         out_dir = out_dir or self.out_dir
         best_checkpoint_file = os.path.join(out_dir, out_name)
         shutil.copy(current_checkpoint_file, best_checkpoint_file)
         return best_checkpoint_file
 
-    def export_visualizations(self, visualizations, iteration, basename='val_', tile=True, out_dir=None):
+    def export_visualizations(self, visualizations, iteration, basename='val_', tile=True,
+                              out_dir=None):
         if visualizations is None:
             return
         out_dir = out_dir or os.path.join(self.out_dir, 'visualization_viz')

@@ -272,7 +272,8 @@ class Trainer_APD(TrainerBase):
         if self.iter % self.exporter.export_config.interval_validate == 0:
             if self.exporter.conservative_export_decider.is_prev_or_next_export_iteration(self.iter):
                 current_checkpoint_file = self.exporter.save_checkpoint(None, self.iter,
-                                                                        self.model, self.optimizer, None, None)
+                                                                        self.model, self.optimizer,
+                                                                        None, None)
 
     def _detect_anomaly(self, losses, loss_dict):
         if not torch.isfinite(losses).all():

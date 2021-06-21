@@ -101,7 +101,7 @@ def decompose_cocoeval_file(filepath):
 
 
 def main():
-    traindir_roots = glob('/home/adelgior/afs_directories/kalman/code/multi-instance-mask-rcnn-extension/output/logs/test/train_2021*')
+    traindir_roots = glob('/home/adelgior/afs_directories/kalman/code/multi-instance-mask-rcnn-extension/output/logs/test/train_2021-06*')
 
     # pprint(traindirs)
     traindirs = {}
