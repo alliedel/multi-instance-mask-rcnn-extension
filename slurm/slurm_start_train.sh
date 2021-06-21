@@ -4,7 +4,7 @@ while :; do
     case $1 in
         -s|--single) single=1
         ;;
-        -l|--long) long=1
+        -t|--short) short=1
         ;;
         -f|--first) first=1
         ;;
@@ -40,10 +40,10 @@ fi
 for f in ${cfglist[@]}; do
     echo $f
 done
-if [ -n "$long" ]; then
-    shortorlong="long"
-else
+if [ -n "$short" ]; then
     shortorlong="short"
+else
+    shortorlong="long"
 fi
 
 
