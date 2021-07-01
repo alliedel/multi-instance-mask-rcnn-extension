@@ -1,6 +1,6 @@
-_BASE_: "./2021_04_22_maskrcnn/debug.yaml"
+_BASE_: "./Base-RCNN-FPN-APD"
 GLOBAL:
-  NOOP: True
+  NOOP: False
 MODEL:
   ROI_MASK_HEAD:
     INIT_ACTIVATED_MASK_HEAD: "custom"  # "standard", "custom"
