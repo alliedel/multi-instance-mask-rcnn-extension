@@ -257,7 +257,7 @@ class Trainer_APD(TrainerBase):
                 for i in [d['image_id'] for d in data]:
                     f.write(f"{i}\n")
                     print(f"{i}\n")
-
+            return
         loss_dict = self.model(data)
         losses = sum(loss for loss in loss_dict.values())
         self._detect_anomaly(losses, loss_dict)
