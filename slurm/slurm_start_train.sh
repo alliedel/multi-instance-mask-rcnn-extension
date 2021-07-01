@@ -58,5 +58,5 @@ for file in ${cfglist[@]}; do
     echo "redirected output to file starting with:"
     echo $outst
     srun --gres=gpu:4 --job-name="$basenm" -o "$outst-job-%j.out" -p "$shortorlong" -t 48:00:00 bash ./train_bash_wrapper.sh --gpus 0,1,2,3 --config $file &
-    sleep 1.5
+    sleep 4.0
 done
