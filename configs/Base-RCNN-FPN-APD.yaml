@@ -35,6 +35,7 @@ MODEL:
     NUM_CONV: 4
     POOLER_RESOLUTION: 14
     MATCHING_LOSS: False
+    N_MASKS_PER_ROI: 2
 DATASETS:
   TRAIN: ("coco_2017_train",)
   TEST: ("coco_2017_val",)
