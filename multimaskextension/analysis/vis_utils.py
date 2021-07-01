@@ -73,8 +73,8 @@ def show_prediction(img, instances, metadata, scale=2.0):
     cv2_imshow(v.get_image()[:, :, ::-1])
 
 
-def show_selected_proposals(img, instances, proposals, selected_proposal_idxs, map_instance_to_proposal_vis, metadata,
-                            scale=2.0):
+def show_selected_proposals(img, instances, proposals, selected_proposal_idxs,
+                            map_instance_to_proposal_vis, metadata, scale=2.0):
     v = Visualizer(img[:, :, ::-1], metadata=metadata, scale=scale)
     v._default_font_size = v._default_font_size * 1.5
     proposals_selected = proposals[selected_proposal_idxs]

@@ -119,7 +119,7 @@ class CustomMaskRCNNConvUpsampleHeadAPD(nn.Module):
         input_channels = input_shape.channels
         cls_agnostic_mask = cfg.MODEL.ROI_MASK_HEAD.CLS_AGNOSTIC_MASK
         self.num_instances_per_class = cfg.MODEL.ROI_MASK_HEAD.N_MASKS_PER_ROI
-        assert self.num_instances_per_class == 2, NotImplementedError
+        assert self.num_instances_per_class <= 2, NotImplementedError
         # fmt: on
 
         self.conv_norm_relus = []

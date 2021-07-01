@@ -87,6 +87,29 @@ class Predictor_APD(PredictorOrTrainerBase_APD):
         super().__init__(cfg)
         self.model.eval()
 
+    def load_checkpoint(self, checkpoint_file):
+        if checkpoint_file is None:
+            return
+        assert os.path.exists(checkpoint_file)
+        state = torch.load(checkpoint_file)
+        for key, value in state.items():
+            if key == 'best_mean_iu' or key == 'mean_iu':
+                pass
+            elif key == 'arch':
+                assert self.model.__class__.__name__ == value
+            elif key == 'epoch':
+                pass
+            elif key == 'iteration':
+                self.start_iter = value
+                self.iter = value
+            elif key == 'model_state_dict' or key == 'model':
+                self.model.load_state_dict(value)
+            elif key == 'optim_state_dict':
+                self.optimizer.load_state_dict(value)
+            else:
+                raise NotImplementedError('No loading written for {}'.format(key))
+
+
 
 class Trainer_APD(TrainerBase):
     def __init__(self, cfg, out_dir=None, interval_validate=1000, n_model_checkpoints=20, checkpoint_resume=None,
