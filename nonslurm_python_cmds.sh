@@ -1,3 +1,13 @@
+#python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-19-011917_VCS-776a559_MAX_ITR-100000_HEAD_TYPE-custom_MATCH-0
+#python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-19-172035_VCS-812882b_MAX_ITR-100000_HEAD_TYPE-custom_MATCH-0
+#python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-19-172035_VCS-812882b_MAX_ITR-100000_HEAD_TYPE-standard
+#python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-19-172131_VCS-812882b_MAX_ITR-100000_HEAD_TYPE-None
+#python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-19-172152_VCS-812882b_MAX_ITR-100000_HEAD_TYPE-standard
+#python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-19-172356_VCS-3b1367f_MAX_ITR-100000_HEAD_TYPE-None
+#python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-20-184444_VCS-3b1367f_MAX_ITR-100000_HEAD_TYPE-custom_MATCH-0
+python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-21-072200_VCS-3b1367f_MAX_ITR-100000_HEAD_TYPE-custom_MATCH-0
+python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-21-081134_VCS-3b1367f_MAX_ITR-100000_HEAD_TYPE-standard
+python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-21-162041_VCS-375c9c4_MAX_ITR-100000_HEAD_TYPE-custom_MATCH-0
 #python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-18-162912_VCS-ebbbb87_MAX_ITR-16_HEAD_TYPE-custom_MATCH-0
 #python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-18-163450_VCS-ebbbb87_MAX_ITR-16_HEAD_TYPE-custom_MATCH-0
 #python val.py --rel-model-pth model_checkpoints --val-dataset coco_2017_val --trained-logdir output/logs/train/train_2021-06-18-164907_VCS-776a559_MAX_ITR-16_HEAD_TYPE-custom_MATCH-0

@@ -509,6 +509,28 @@ def prep_image(datapoint, cfg):
     return input_image
 
 
+def run_inference_new(model, inputs):
+    previously_training = model.training
+    model.eval()
+    with inference_context(model), torch.no_grad():
+        # Get proposals
+        images = model.preprocess_image(inputs)
+        features = model.backbone(images.tensor)
+        proposalss, proposal_lossess = model.proposal_generator(images, features, None)
+
+        # Get instance boxes, masks, and proposal idxs
+        outputs, extra_proposal_details = model(inputs, trace_proposals=True)
+
+    if previously_training:
+        model.train()
+
+    return {'outputs': outputs,
+            'proposalss': proposalss,
+            'proposal_lossess': proposal_lossess,
+            'extra_proposal_details': extra_proposal_details
+            }
+
+
 def run_inference(trainer, inputs):
     previously_training = trainer.model.training
     trainer.model.eval()

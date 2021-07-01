@@ -11,4 +11,6 @@ balloon_dataset.zip
 *.jpg
 *.mp4
 /scrap_local
+./filename.html
+./outfile.html
 
