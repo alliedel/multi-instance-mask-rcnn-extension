@@ -192,8 +192,10 @@ class Trainer_APD(TrainerBase):
         self.load_checkpoint(checkpoint_file=checkpoint_resume)
 
         if self.mode == 'train' and cfg.MODEL.ROI_MASK_HEAD.REINIT_MASK_HEAD:
+            logger = logging.getLogger(__name__)
             for mask_head in [k for k, v in self.model.roi_heads.named_children() if 'mask_head' in k]:
                 reinitialize_mask_head_weights(getattr(self.model.roi_heads, mask_head))
+                logger.info(f"Reinitializing mask head {mask_head}")
                 # NOTE(allie): mask class should implement, but wanted it to be consistent for
                 # these experiments, so I implement it here.
 
