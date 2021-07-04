@@ -1,0 +1,23 @@
+_BASE_: "./base.yaml"
+MODEL:
+  ROI_MASK_HEAD:
+    MATCHING_LOSS: False
+    INIT_ACTIVATED_MASK_HEAD: "custom"  # "standard", "custom"
+    REINIT_MASK_HEAD: True
+    N_MASKS_PER_ROI: 2
+  ROI_HEADS:
+    NAME: "MultiROIHeadsAPD"  #  "StandardROIHeads", "MultiROIHeadsAPD"
+    NUM_CLASSES: 80
+  RESNETS:
+    DEPTH: 50
+SOLVER:
+  STEPS: (210000, 250000)
+  MAX_ITER: 100000
+  IMS_PER_BATCH: 8
+DATASETS:
+  TRAIN: ("coco_2017_train",)
+  TEST: ("coco_2017_val",)
+DATALOADER:
+  SAMPLER_TRAIN: "GeneralizedRepeatFactorTrainingSampler"
+  FILE_FOR_REPEAT_FACTOR: "output/cache/coco_stats/boxmask_intersections.npy"
+  REPEAT_THRESHOLD: 0.01
