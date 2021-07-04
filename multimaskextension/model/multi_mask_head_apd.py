@@ -149,7 +149,9 @@ class CustomMaskRCNNConvUpsampleHeadAPD(nn.Module):
         num_mask_classes = 1 if cls_agnostic_mask else num_classes
         self.predictor = Conv2d(conv_dims, num_mask_classes * self.num_instances_per_class, kernel_size=1, stride=1,
                                 padding=0)
+        self.reinitialize_weights()
 
+    def reinitialize_weights(self):
         for layer in self.conv_norm_relus + [self.deconv]:
             weight_init.c2_msra_fill(layer)
         # use normal distribution initialization for mask prediction layer

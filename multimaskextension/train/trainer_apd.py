@@ -15,9 +15,11 @@ from collections import OrderedDict
 
 import numpy as np
 import torch
+from torch import nn
 import tqdm
 from tensorboardX import SummaryWriter
 from torch.nn.parallel import DistributedDataParallel
+import fvcore.nn.weight_init as weight_init
 
 import detectron2.data.transforms as T
 import detectron2.utils.comm as comm
@@ -110,10 +112,9 @@ class Predictor_APD(PredictorOrTrainerBase_APD):
                 raise NotImplementedError('No loading written for {}'.format(key))
 
 
-
 class Trainer_APD(TrainerBase):
-    def __init__(self, cfg, out_dir=None, interval_validate=1000, n_model_checkpoints=20, checkpoint_resume=None,
-                 mode='train'):
+    def __init__(self, cfg, out_dir=None, interval_validate=1000, n_model_checkpoints=20,
+                 checkpoint_resume=None, mode='train'):
         super().__init__()
         self.mode = mode
         self.cfg = cfg.clone()  # cfg can be modified by model
@@ -189,6 +190,12 @@ class Trainer_APD(TrainerBase):
         self.t_val = None  # We need to initialize this when we make our validation watcher.
 
         self.load_checkpoint(checkpoint_file=checkpoint_resume)
+
+        if self.mode == 'train' and cfg.MODEL.ROI_MASK_HEAD.REINIT_MASK_HEAD:
+            for mask_head in [k for k, v in self.model.roi_heads.named_children() if 'mask_head' in k]:
+                reinitialize_mask_head_weights(getattr(self.model.roi_heads, mask_head))
+                # NOTE(allie): mask class should implement, but wanted it to be consistent for
+                # these experiments, so I implement it here.
 
         self.pbar = tqdm.tqdm(initial=self.start_iter, total=self.max_iter, desc='Training')
 
@@ -420,3 +427,12 @@ class Trainer_APD(TrainerBase):
                 )
                 + 1
         )
+
+def reinitialize_mask_head_weights(mask_head):
+    for layer in mask_head.conv_norm_relus + [mask_head.deconv]:
+        weight_init.c2_msra_fill(layer)
+    # use normal distribution initialization for mask prediction layer
+    nn.init.normal_(mask_head.predictor.weight, std=0.001)
+    if mask_head.predictor.bias is not None:
+        nn.init.constant_(mask_head.predictor.bias, 0)
+
