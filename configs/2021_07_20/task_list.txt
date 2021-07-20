@@ -1,0 +1,2 @@
+sh slurm/slurm_start_train_with_args.sh configs/2021_07_20/cust_nonu.yaml --resume /home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-07-03-221550_VCS-fecca4a_MAX_ITR-100000_HEAD_TYPE-custom_MATCH-0/
+sh slurm/slurm_start_train_with_args.sh configs/2021_07_20/std_nonu.yaml --resume /home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/train/train_2021-07-05-131801_VCS-fecca4a_MAX_ITR-100000_HEAD_TYPE-standard/
