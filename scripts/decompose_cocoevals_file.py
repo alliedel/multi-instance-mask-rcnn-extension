@@ -100,47 +100,56 @@ def decompose_cocoeval_file(filepath):
         torch.save(d[taskname], outname)
 
 
-def main():
-    traindir_roots = glob('/home/adelgior/afs_directories/kalman/code/multi-instance-mask-rcnn-extension/output/logs/test/train_2021-06*')
+#def main():
+#    traindir_roots = glob('/home/adelgior/afs_directories/kalman/code/multi-instance-mask-rcnn-extension/output/logs/test/train_2021-07*')
 
     # pprint(traindirs)
-    traindirs = {}
-    for d in traindir_roots:
+#    traindirs = {}
+#    for d in traindir_roots:
+#        print(d)
         # lst = glob(os.path.join(d, 'coco_2017_val', 'itr*'))
-        lst = glob(os.path.join(d, 'coco_2017_val', 'itr16000'))
-        headtype = [s for s in ['HEAD_TYPE-custom_MATCH-1', 'HEAD_TYPE-custom_MATCH-0', 'HEAD_TYPE-None', 'HEAD_TYPE-standard'] if s in os.path.basename(d)][0]
-        iterations = [int(os.path.basename(l).replace('itr', '')) for l in lst]
-        for i, l in zip(iterations, lst):
-            if not os.path.exists(os.path.join(l, 'cocoevals-decomp/')):
-                print('Decomposing the cocoeval file')
-                decompose_cocoeval_file(os.path.join(l, 'cocoevals.pth'))
-            task_segm_files = glob(os.path.join(l, 'cocoevals-decomp/*-segm.pth'))
-            tasks = [os.path.splitext(os.path.basename(t))[0] for t in task_segm_files]
-            traindirs[(headtype, i)] = {t: f for t, f in zip(tasks, task_segm_files)}
+#        lst = glob(os.path.join(d, 'coco_2017_val', 'itr16000'))
+        #headtype = [s for s in ['HEAD_TYPE-custom_MATCH-1', 'HEAD_TYPE-custom_MATCH-0', 'HEAD_TYPE-None', 'HEAD_TYPE-standard'] if s in os.path.basename(d)][0]
+#        iterations = [int(os.path.basename(l).replace('itr', '')) for l in lst]
+#        for i, l in zip(iterations, lst):
+#            if not os.path.exists(os.path.join(l, 'cocoevals-decomp/')):
+#                print('Decomposing the cocoeval file')
+#                decompose_cocoeval_file(os.path.join(l, 'cocoevals.pth'))
+#            task_segm_files = glob(os.path.join(l, 'cocoevals-decomp/*-segm.pth'))
+#            tasks = [os.path.splitext(os.path.basename(t))[0] for t in task_segm_files]
+#            traindirs[(headtype, i)] = {t: f for t, f in zip(tasks, task_segm_files)}
 
+def parse_args():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--regex', required=False, default='/home/adelgior/code/multi-instance-mask-rcnn-extension/output/logs/test/train_2021-06*', type=str)
+    return parser.parse_args()
 
 def main():
     # Load cocoevals and convert to dataframes if not cached.
-
+    args = parse_args()
     traindirs = {}
-    traindir_roots = glob(
-        '/home/adelgior/code/multi-instance-mask-rcnn-extension/output'
-        '/logs/test/train_2021*')
+    traindir_roots = glob(args.regex)
+    print(f"{len(traindir_roots)} logs found with regex {args.regex}")
     for d in traindir_roots:
+        print(d)
         lst = glob(os.path.join(d, 'coco_2017_val', 'itr*'))
+        print(lst)
         # lst = glob(os.path.join(d, 'coco_2017_val', 'itr16000'))
 
-        headtype = [s for s in
-                    ['HEAD_TYPE-custom_MATCH-1', 'HEAD_TYPE-custom_MATCH-0', 'HEAD_TYPE-None',
-                     'HEAD_TYPE-standard'] if s in os.path.basename(d)][0]
+        #headtype = [s for s in
+        #            ['HEAD_TYPE-custom_MATCH-1', 'HEAD_TYPE-custom_MATCH-0', 'HEAD_TYPE-None',
+        #             'HEAD_TYPE-standard'] if s in os.path.basename(d)][0]
         iterations = [int(os.path.basename(l).replace('itr', '')) for l in lst]
         for i, l in zip(iterations, lst):
+            print(l)
             if not os.path.exists(os.path.join(l, 'cocoevals-decomp/')):
                 print('Decomposing the cocoeval file')
                 decompose_cocoeval_file(os.path.join(l, 'cocoevals.pth'))
             task_segm_files = glob(os.path.join(l, 'cocoevals-decomp/*-segm.pth'))
             tasks = [os.path.splitext(os.path.basename(t))[0] for t in task_segm_files]
-            traindirs[(headtype, i)] = {t: f for t, f in zip(tasks, task_segm_files)}
+            traindirs[l] = {t: f for t, f in zip(tasks, task_segm_files)}
+         #   traindirs[(headtype, i)] = {t: f for t, f in zip(tasks, task_segm_files)}
     cocoevals = {}
     i = 0
     df_csv_names = {}
