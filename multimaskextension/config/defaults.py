@@ -96,6 +96,8 @@ _C.DATASETS.TEST = ()
 _C.DATASETS.PROPOSAL_FILES_TEST = ()
 # Number of top scoring precomputed proposals to keep for test
 _C.DATASETS.PRECOMPUTED_PROPOSAL_TOPK_TEST = 1000
+# Custom path for overfitting to a single image (special train mode added)
+_C.DATASETS.SINGLE_IMAGE_PATH = ()
 
 # -----------------------------------------------------------------------------
 # DataLoader
@@ -536,7 +538,9 @@ _C.TEST = CN()
 _C.TEST.EXPECTED_RESULTS = []
 # The period (in terms of steps) to evaluate the model during training.
 # Set to 0 to disable.
-_C.TEST.EVAL_PERIOD = 0
+_C.TEST.EVAL_PERIOD = 1000
+_C.TEST.CONSERVATIVE_CHECKPOINT_CLEAN = True  # only works with exponential_checkpoint_save
+_C.TEST.EXPONENTIAL_CHECKPOINT_SAVE = True
 # The sigmas used to calculate keypoint OKS.
 # When empty it will use the defaults in COCO.
 # Otherwise it should have the same length as ROI_KEYPOINT_HEAD.NUM_KEYPOINTS.

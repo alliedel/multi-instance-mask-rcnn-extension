@@ -113,8 +113,8 @@ class Predictor_APD(PredictorOrTrainerBase_APD):
 
 
 class Trainer_APD(TrainerBase):
-    def __init__(self, cfg, out_dir=None, interval_validate=1000, n_model_checkpoints=20,
-                 checkpoint_resume=None, mode='train'):
+    def __init__(self, cfg, out_dir=None, interval_validate=None, n_model_checkpoints=20,
+                 checkpoint_resume=None, mode='train', conservative_checkpoint_clean=True):
         super().__init__()
         self.mode = mode
         self.cfg = cfg.clone()  # cfg can be modified by model
@@ -171,7 +171,9 @@ class Trainer_APD(TrainerBase):
         )
         self.start_iter = 0  # Will be changed if/when resume state is loaded
         self.max_iter = cfg.SOLVER.MAX_ITER if not cfg.GLOBAL.ONE_EPOCH else \
-            len(self.data_loader.dataset)  # I should divide by batch size, but not sure how itrs map with distributed
+            len(
+                self.data_loader.dataset)  # I should divide by batch size, but not sure how itrs
+        # map with distributed
         self.cfg = cfg
 
         # event storage
@@ -180,8 +182,9 @@ class Trainer_APD(TrainerBase):
         metric_makers = {
         }
 
-        export_config = ExportConfig(out_dir, interval_validate=interval_validate,
-                                     max_n_saved_models=n_model_checkpoints)
+        export_config = ExportConfig(out_dir, interval_validate=cfg.TEST.EVAL_PERIOD,
+                                     max_n_saved_models=n_model_checkpoints,
+                                     conservative_checkpoint_clean=cfg.TEST.CONSERVATIVE_CHECKPOINT_CLEAN)
         tensorboard_writer = SummaryWriter(log_dir=out_dir)
 
         self.exporter = TrainerExporter(
@@ -193,7 +196,8 @@ class Trainer_APD(TrainerBase):
 
         if self.mode == 'train' and cfg.MODEL.ROI_MASK_HEAD.REINIT_MASK_HEAD:
             logger = logging.getLogger(__name__)
-            for mask_head in [k for k, v in self.model.roi_heads.named_children() if 'mask_head' in k]:
+            for mask_head in [k for k, v in self.model.roi_heads.named_children() if
+                              'mask_head' in k]:
                 reinitialize_mask_head_weights(getattr(self.model.roi_heads, mask_head))
                 logger.info(f"Reinitializing mask head {mask_head}")
                 print(f"Reinitializing mask head {mask_head}")
@@ -201,6 +205,10 @@ class Trainer_APD(TrainerBase):
                 # these experiments, so I implement it here.
 
         self.pbar = tqdm.tqdm(initial=self.start_iter, total=self.max_iter, desc='Training')
+
+        # Quick assert TODO(allie): Clean and run assert at cfg creation
+        assert not self.cfg.TEST.EXPONENTIAL_CHECKPOINT_SAVE and \
+               self.exporter.export_config.conservative_checkpoint_clean
 
     def load_checkpoint(self, checkpoint_file):
         if checkpoint_file is None:
@@ -236,7 +244,35 @@ class Trainer_APD(TrainerBase):
         Returns:
             OrderedDict of results, if evaluation is enabled. Otherwise None.
         """
-        return super().train(self.start_iter, self.max_iter)
+        ret = super().train(self.start_iter, self.max_iter)
+        final_checkpoint_file = self.save_final_checkpoint(None, self.iter,
+                                                           self.model, self.optimizer,
+                                                           None, None)
+
+        return ret
+
+    def save_final_checkpoint(self, epoch, iteration, model, optimizer, best_mean_iu,
+                              mean_iu, out_dir=None):
+        out_name = 'final-checkpoint.pth.tar'
+        out_dir = out_dir or os.path.join(self.exporter.out_dir)
+        checkpoint_file = os.path.join(out_dir, out_name)
+        if hasattr(self.checkpointer, 'module'):
+            model_state_dict = model.module.state_dict()  # nn.DataParallel
+        else:
+            model_state_dict = model.state_dict()
+        torch.save({
+            'epoch': epoch,
+            'iteration': iteration,
+            'arch': model.__class__.__name__,
+            'optim_state_dict': optimizer.state_dict(),
+            'model_state_dict': model_state_dict,
+            'best_mean_iu': best_mean_iu,
+            'mean_iu': mean_iu
+        }, checkpoint_file)
+
+        self.exporter.model_history_saver.save_model_to_history(iteration, checkpoint_file,
+                                                                clean_up_checkpoints=False)
+        return checkpoint_file
 
     def run_step(self):
         """
@@ -303,10 +339,12 @@ class Trainer_APD(TrainerBase):
             # self.exporter.tensorboard_writer.add_scalar(f"B_hyperparams/lr",
             #                                             self.optimizer.state, self.iter)
         if self.iter % self.exporter.export_config.interval_validate == 0:
-            if self.exporter.conservative_export_decider.is_prev_or_next_export_iteration(self.iter):
-                current_checkpoint_file = self.exporter.save_checkpoint(None, self.iter,
-                                                                        self.model, self.optimizer,
-                                                                        None, None)
+            if self.cfg.TEST.EXPONENTIAL_CHECKPOINT_SAVE \
+                    and self.exporter.conservative_export_decider.is_prev_or_next_export_iteration(
+                    self.iter):
+                current_checkpoint_file = self.exporter.save_checkpoint(
+                    None, self.iter, self.model, self.optim, None, None, out_dir=None,
+                    clean_up_checkpoints=self.exporter.export_config.conservative_checkpoint_clean)
 
     def _detect_anomaly(self, losses, loss_dict):
         if not torch.isfinite(losses).all():
@@ -431,6 +469,7 @@ class Trainer_APD(TrainerBase):
                 + 1
         )
 
+
 def reinitialize_mask_head_weights(mask_head):
     for layer in mask_head.conv_norm_relus + [mask_head.deconv]:
         weight_init.c2_msra_fill(layer)
@@ -438,4 +477,3 @@ def reinitialize_mask_head_weights(mask_head):
     nn.init.normal_(mask_head.predictor.weight, std=0.001)
     if mask_head.predictor.bias is not None:
         nn.init.constant_(mask_head.predictor.bias, 0)
-

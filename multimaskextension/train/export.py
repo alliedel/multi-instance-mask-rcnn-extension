@@ -14,16 +14,18 @@ MY_TIMEZONE = 'America/New_York'
 
 class ExportConfig(object):
 
-    def __init__(self, out_dir, interval_validate=None, max_n_saved_models=None):
+    def __init__(self, out_dir, interval_validate=None, max_n_saved_models=None,
+                 conservative_checkpoint_clean=True):
         self.out_dir = out_dir
         self.interval_validate = interval_validate
         self.max_n_saved_models = 30 if max_n_saved_models is None else max_n_saved_models
         self.export_component_losses = True
+        self.conservative_checkpoint_clean = conservative_checkpoint_clean
 
 
 class ModelHistorySaver(object):
     def __init__(self, model_checkpoint_dir, interval_validate, max_n_saved_models=20,
-                 max_n_iterations=100000):
+                 max_n_iterations=100000, run_checkpoint_cleaner=True):
         assert np.mod(max_n_saved_models, 2) == 0, 'Max_n_saved_models must be even'
         self.model_checkpoint_dir = model_checkpoint_dir
         if not os.path.exists(model_checkpoint_dir):
@@ -208,7 +210,7 @@ class TrainerExporter(object):
             f.write(','.join(log) + '\n')
 
     def save_checkpoint(self, epoch, iteration, model, optimizer, best_mean_iu, mean_iu,
-                        out_dir=None):
+                        out_dir=None, clean_up_checkpoints=True):
         out_name = 'checkpoint.pth.tar'
         out_dir = out_dir or os.path.join(self.out_dir)
         checkpoint_file = os.path.join(out_dir, out_name)
@@ -226,8 +228,8 @@ class TrainerExporter(object):
             'mean_iu': mean_iu
         }, checkpoint_file)
 
-        self.model_history_saver.save_model_to_history(iteration, checkpoint_file,
-                                                       clean_up_checkpoints=True)
+        self.model_history_saver.save_model_to_history(
+            iteration, checkpoint_file, clean_up_checkpoints=clean_up_checkpoints)
         return checkpoint_file
 
     def copy_checkpoint_as_best(self, current_checkpoint_file, out_dir=None,

@@ -265,13 +265,19 @@ def just_inference_on_dataset(model, data_loader, outdir, stop_after_n_points=No
     proposals_outdir = os.path.join(outdir, 'proposals') if get_proposals else None
     if get_proposals:
         if os.path.exists(proposals_outdir):
-            raise Exception('Proposals outdir {} already exists.  Please delete.')
-        os.makedirs(proposals_outdir)
+            # raise Exception('Proposals outdir {} already exists.  Please delete.')
+            print(Warning(f"Proposals outdir {proposals_outdir} already exists.  Overwriting "
+                          f"anything in here..."))
+        else:
+            os.makedirs(proposals_outdir)
 
     inference_outdir = os.path.join(outdir, 'predictions')
     if os.path.exists(inference_outdir):
-        raise Exception(f"Predictions outdir {inference_outdir} already exists.  Please delete.")
-    os.makedirs(inference_outdir)
+        # raise Exception(f"Predictions outdir {inference_outdir} already exists.  Please delete.")
+        print(f"Predictions outdir {inference_outdir} already exists.  Overwriting anything in "
+              f"here...")
+    else:
+        os.makedirs(inference_outdir)
     with inference_context(model), torch.no_grad():
         for idx, inputs in enumerate(data_loader):
 
@@ -291,7 +297,7 @@ def just_inference_on_dataset(model, data_loader, outdir, stop_after_n_points=No
             if cuda:
                 torch.cuda.synchronize()
             total_compute_time += time.time() - start_compute_time
-            print(idx, '/', n_points)
+            print(idx+1, '/', n_points)
             if data_loader.batch_sampler.batch_size != 1:
                 raise NotImplementedError
             else:

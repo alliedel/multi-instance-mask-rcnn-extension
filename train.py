@@ -47,13 +47,15 @@ def main(config_filepath='./detectron2_repo/configs/COCO-InstanceSegmentation/ma
         f.write(cfg.dump())
     print("Full config saved to {}".format(os.path.abspath(config_outpath)))
     checkpoint_resume = None if resume_logdir is None else os.path.join(resume_logdir, rel_model_pth)
-    trainer = Trainer_APD(cfg, out_dir=output_dir, interval_validate=1000, n_model_checkpoints=20,
+    trainer = Trainer_APD(cfg, out_dir=output_dir, n_model_checkpoints=20,
                           checkpoint_resume=checkpoint_resume)
     if not cfg.MODEL.ROI_HEADS.NAME == 'StandardROIHeads':
         script_utils.activate_head_type(trainer, head_type)
 
+
     print('Beginning training')
     trainer.train()
+
 
 
 def get_parser():
