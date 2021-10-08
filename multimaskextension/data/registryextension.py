@@ -6,9 +6,12 @@ from detectron2.data.datasets.builtin_meta import _get_builtin_metadata
 
 _PREDEFINED_SPLITS_COCO = {}
 _PREDEFINED_SPLITS_COCO["coco"] = {
-    "coco_2017_reweight1_train": ("coco/train2017", "coco/annotations/instances_coco_2017_reweight1_train.json"),
-    "coco_2017_debug_train": ("coco/train2017", "coco/annotations/instances_coco_2017_debug_train.json"),
-    "coco_2017_debug_val": ("coco/val2017", "coco/annotations/instances_coco_2017_debug_val.json"),
+    "coco_2017_reweight1_train": ("coco/train2017",
+                                  "coco/annotations/instances_coco_2017_reweight1_train.json"),
+    "coco_2017_debug_train": ("coco/train2017",
+                              "coco/annotations/instances_coco_2017_debug_train.json"),
+    "coco_2017_debug_val": ("coco/val2017",
+                            "coco/annotations/instances_coco_2017_debug_val.json"),
 }
 
 
