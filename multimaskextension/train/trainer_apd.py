@@ -207,8 +207,9 @@ class Trainer_APD(TrainerBase):
         self.pbar = tqdm.tqdm(initial=self.start_iter, total=self.max_iter, desc='Training')
 
         # Quick assert TODO(allie): Clean and run assert at cfg creation
-        assert not self.cfg.TEST.EXPONENTIAL_CHECKPOINT_SAVE and \
-               self.exporter.export_config.conservative_checkpoint_clean
+        assert not (self.exporter.export_config.conservative_checkpoint_clean and not
+            self.cfg.TEST.EXPONENTIAL_CHECKPOINT_SAVE), 'Cannot run conservative checkpoint clean' \
+                                                        ' without exponential checkpoint save'
 
     def load_checkpoint(self, checkpoint_file):
         if checkpoint_file is None:
@@ -343,7 +344,7 @@ class Trainer_APD(TrainerBase):
                     and self.exporter.conservative_export_decider.is_prev_or_next_export_iteration(
                     self.iter):
                 current_checkpoint_file = self.exporter.save_checkpoint(
-                    None, self.iter, self.model, self.optim, None, None, out_dir=None,
+                    None, self.iter, self.model, self.optimizer, None, None, out_dir=None,
                     clean_up_checkpoints=self.exporter.export_config.conservative_checkpoint_clean)
 
     def _detect_anomaly(self, losses, loss_dict):

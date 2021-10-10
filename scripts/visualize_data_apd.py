@@ -1,16 +1,19 @@
 ## For predictions:
 # visualize_data_apd.py
 #   --source prediction
-#   --predictions-json output/logs/test/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-0/
+#   --predictions-json output/logs/test/train_primary_secondary_full_2021-01-23-185542_VCS
+#   -64d87d7_MATCH-0/
 #       d2s_val_occlusion/itr256000/coco_instances_results_agg-pred_masks1_pred_masks2.json
 #   --dataset d2s_val_occlusion
-#   --config-file output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-1/config.yaml
+#   --config-file output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS
+#   -64d87d7_MATCH-1/config.yaml
 #   --output-dir /home/adelgior/workspace/images/visualize_data
 
 ## For GT:
 # visualize_data_apd.py
 #   --dataset d2s_val_occlusion
-#   --config-file output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS-64d87d7_MATCH-1/config.yaml
+#   --config-file output/logs/train/train_primary_secondary_full_2021-01-23-185542_VCS
+#   -64d87d7_MATCH-1/config.yaml
 #   --source annotation
 #   --output-dir /home/adelgior/workspace/images/visualize_data
 
@@ -54,7 +57,8 @@ def parse_args(in_args=None):
     if args.source != "prediction":
         assert args.predictions_json == ""
     else:
-        assert args.predictions_json != "", '--predictions_file must be set if using --source prediction'
+        assert args.predictions_json != "", '--predictions_file must be set if using --source ' \
+                                            'prediction'
     return args
 
 
@@ -90,8 +94,9 @@ def json_to_dicts(predictions, iminfo, assumed_bbox_mode=BoxMode.XYXY_ABS):
     # we're going to fill it as a dictionary; will convert to list.
     for p in predictions:
         image_id = p['image_id']
-        assert image_id in predictions_as_dicts, ValueError(f"predictions didn\'t match the file info from the "
-                                                            f"dataset ({image_id} in predictions)")
+        assert image_id in predictions_as_dicts, ValueError(
+            f"predictions didn\'t match the file info from the "
+            f"dataset ({image_id} in predictions)")
         if 'bbox_mode' not in p:
             p['bbox_mode'] = assumed_bbox_mode
         predictions_as_dicts[image_id]['annotations'].append(p)
@@ -107,7 +112,7 @@ def main():
         if args.dataset in ['train', 'val'] else [args.dataset]
     cfg.merge_from_list(args.opts)
     cfg.freeze()
-    dirname = args.output_dir
+    dirname = os.path.expanduser(args.output_dir)
     os.makedirs(dirname, exist_ok=True)
     metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
 

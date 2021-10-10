@@ -1,7 +1,7 @@
 _BASE_: "../Base-RCNN-FPN-APD.yaml"
 MODEL:
   ROI_MASK_HEAD:
-    REINIT_MASK_HEAD: True
+    REINIT_MASK_HEAD: False
     N_MASKS_PER_ROI: 2
   ROI_HEADS:
     NAME: "MultiROIHeadsAPD"  #  "StandardROIHeads", "MultiROIHeadsAPD"
@@ -11,7 +11,7 @@ MODEL:
 SOLVER:
   BASE_LR: 0.05
   STEPS: (210000, 250000)
-  MAX_ITER: 10000
+  MAX_ITER: 1000
   IMS_PER_BATCH: 1
 DATASETS:
   TRAIN: ("single_image",)
