@@ -1,0 +1,25 @@
+_BASE_: "../Base-RCNN-FPN-APD.yaml"
+MODEL:
+  ROI_MASK_HEAD:
+    REINIT_MASK_HEAD: True
+    N_MASKS_PER_ROI: 2
+  ROI_HEADS:
+    NAME: "MultiROIHeadsAPD"  #  "StandardROIHeads", "MultiROIHeadsAPD"
+    NUM_CLASSES: 80
+  RESNETS:
+    DEPTH: 50
+SOLVER:
+  BASE_LR: 0.05
+  STEPS: (210000, 250000)
+  MAX_ITER: 1000
+  IMS_PER_BATCH: 1
+DATASETS:
+  TRAIN: ("singleimg_nephews_gt",)
+  TEST: ("singleimg_nephews_gt",)
+DATALOADER:
+  SAMPLER_TRAIN: "TrainingSampler"
+TEST:
+  EVAL_PERIOD: 100
+  EXPONENTIAL_CHECKPOINT_SAVE: True
+  CONSERVATIVE_CHECKPOINT_CLEAN: False
+SEED: 41

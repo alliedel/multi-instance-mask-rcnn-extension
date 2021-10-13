@@ -16,7 +16,7 @@ from detectron2.evaluation.evaluator import inference_context
 
 from multimaskextension.train import script_utils
 from multimaskextension.train.script_utils import get_maskrcnn_cfg, DETECTRON_REPO
-from multimaskextension.analysis.vis_utils import cv2_imshow, FigExporter
+from multimaskextension.analysis.vis_utils import plt_imshow, FigExporter
 
 
 def dbprint(*args, **kwargs):
@@ -27,7 +27,7 @@ def dbprint(*args, **kwargs):
 # a. Get example image to work with
 
 im = cv2.imread("./input.jpg")
-cv2_imshow(im)
+plt_imshow(im)
 exporter = FigExporter(workspace_dir='/home/workspace/images/')
 exporter.export_gcf('input')
 
@@ -50,7 +50,7 @@ from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog
 v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
 v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-cv2_imshow(v.get_image()[:, :, ::-1])
+plt_imshow(v.get_image()[:, :, ::-1])
 exporter.export_gcf('prediction')
 
 #

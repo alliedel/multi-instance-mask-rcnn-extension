@@ -6,7 +6,7 @@ import os
 import tempfile
 
 from multimaskextension.train.script_utils import get_maskrcnn_cfg
-from multimaskextension.analysis.vis_utils import cv2_imshow, FigExporter
+from multimaskextension.analysis.vis_utils import plt_imshow, FigExporter
 
 
 def get_splits_and_ids_for_image_ids(image_ids, list_of_image_ids):
@@ -96,7 +96,7 @@ def main():
             masks=None,
             keypoints=None,
         )
-        cv2_imshow(vis.get_image()[:, :, ::-1])
+        plt_imshow(vis.get_image()[:, :, ::-1])
         exporter.export_gcf(tag='gt_' + str(per_image["image_id"]))
 
 

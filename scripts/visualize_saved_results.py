@@ -5,7 +5,7 @@ from detectron2.data import MetadataCatalog
 from detectron2.utils.visualizer import Visualizer
 
 from multimaskextension.train import script_utils
-from multimaskextension.analysis.vis_utils import cv2_imshow, FigExporter
+from multimaskextension.analysis.vis_utils import plt_imshow, FigExporter
 
 
 testtraindir = '/afs_directories/kalman/code/multi-instance-mask-rcnn-extension/output/logs/test\
@@ -34,15 +34,15 @@ scale = 2.0
 v = Visualizer(img[:, :, ::-1], metadata=metadata, scale=scale)
 v._default_font_size = v._default_font_size * 1.5
 v = v.draw_instance_predictions(predictions["instances"].to("cpu"))
-cv2_imshow(v.get_image()[:, :, ::-1])
+plt_imshow(v.get_image()[:, :, ::-1])
 exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_prediction')
 
-cv2_imshow(img[:, :, ::-1])
+plt_imshow(img[:, :, ::-1])
 exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_input')
 
 v = Visualizer(img[:, :, ::-1], metadata=metadata, scale=scale)
 v._default_font_size = v._default_font_size * 1.5
 proposals.pred_boxes = proposals.proposal_boxes
 v = v.draw_instance_predictions(proposals.to('cpu'))
-cv2_imshow(v.get_image()[:, :, ::-1])
+plt_imshow(v.get_image()[:, :, ::-1])
 exporter.export_gcf(os.path.splitext(os.path.basename(__file__))[0] + '_' + image_id + '_proposals')

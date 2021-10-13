@@ -62,7 +62,7 @@ class MyVisualizer(Visualizer):
             alpha = 0.5
         return alpha, colors
 
-    def draw_dict(self, dic):
+    def draw_dict(self, dic, annos_use_contiguous=False):
         annos = dic.get("annotations", None)
         if annos:
             if "segmentation" in annos[0]:
@@ -79,7 +79,7 @@ class MyVisualizer(Visualizer):
                          annos]
             else:
                 boxes = [x["bbox"] for x in annos]
-            labels = self.get_labels(annos)
+            labels = self.get_labels(annos, annos_use_contiguous=annos_use_contiguous)
             alpha, colors = self.get_colors([x['category_id'] for x in annos])
 
             if self._instance_mode == ColorMode.IMAGE_BW:

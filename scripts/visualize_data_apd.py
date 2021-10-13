@@ -89,6 +89,8 @@ def json_to_dicts(predictions, iminfo, assumed_bbox_mode=BoxMode.XYXY_ABS):
                 'image_id': anno['image_id'],
                 'annotations': []
             }
+
+
         for anno in iminfo
     }
     # we're going to fill it as a dictionary; will convert to list.
@@ -153,7 +155,8 @@ def main():
         for dic in dicts:
             img = utils.read_image(dic["file_name"], "RGB")
             visualizer = MyVisualizer(img, metadata=metadata, scale=scale)
-            vis = visualizer.draw_dict(dic)
+            # labels = [metadata.thing_classes[i] for i in target_fields["gt_classes"]]
+            vis = visualizer.draw_dict(dic, annos_use_contiguous=True)
             output(vis, os.path.basename(dic["file_name"]))
     elif args.source == "prediction":
         gt_dicts = list(chain.from_iterable([DatasetCatalog.get(k) for k in cfg.DATASETS.TRAIN]))

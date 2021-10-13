@@ -1,4 +1,4 @@
-for traind in output/logs/train/train_2021-10-10-*; do
+for traind in output/logs/train/train_2021-10-11-*; do
     [ -e "${traind}/model_checkpoints" ] || continue
     traindbase="${traind##*/}"
     rel_model_pth="model_checkpoints"

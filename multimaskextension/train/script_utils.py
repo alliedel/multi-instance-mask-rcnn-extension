@@ -378,9 +378,10 @@ def run_vanilla_evaluation(images, cfg, outputs, image_ids, model=None, exporter
         # d. Visualize and export Mask R-CNN predictions
         metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
         proposal_score_thresh = None if model is None else model.roi_heads.test_score_thresh
-        visualize_single_image_output(img, metadata, pred_instances=output, proposals=None, image_id=str(image_id),
-                                      extra_proposal_details=None,
-                                      scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter)
+        visualize_single_image_output(img, metadata, pred_instances=output, proposals=None,
+                                      image_id=str(image_id), extra_proposal_details=None,
+                                      scale=2.0, proposal_score_thresh=proposal_score_thresh,
+                                      exporter=exporter)
 
 
 def run_batch_results_visualization(images, cfg, outputs_d, image_ids, model=None, exporter=None,
@@ -398,17 +399,18 @@ def run_batch_results_visualization(images, cfg, outputs_d, image_ids, model=Non
                                                proposals, visualize_just_image)
 
 
-def run_single_image_results_visualization(cfg, exporter, extra_proposal_details, image_id, img, model, output,
-                                           proposals, visualize_just_image):
+def run_single_image_results_visualization(cfg, exporter, extra_proposal_details, image_id, img,
+                                           model, output, proposals, visualize_just_image):
     img, pred_instances, proposals = prep_for_visualization(cfg, img, output['instances'], proposals)
     output['instances'] = pred_instances
     # d. Visualize and export Mask R-CNN predictions
     metadata = MetadataCatalog.get(cfg.DATASETS.TRAIN[0])
     proposal_score_thresh = None if model is None else model.roi_heads.test_score_thresh
-    visualize_single_image_output(img, metadata, pred_instances=output, proposals=proposals, image_id=str(image_id),
+    visualize_single_image_output(img, metadata, pred_instances=output, proposals=proposals,
+                                  image_id=str(image_id),
                                   extra_proposal_details=extra_proposal_details,
-                                  scale=2.0, proposal_score_thresh=proposal_score_thresh, exporter=exporter,
-                                  visualize_just_image=visualize_just_image)
+                                  scale=2.0, proposal_score_thresh=proposal_score_thresh,
+                                  exporter=exporter, visualize_just_image=visualize_just_image)
 
 
 def prep_for_visualization(cfg, img, pred_instances=None, proposals=None):
