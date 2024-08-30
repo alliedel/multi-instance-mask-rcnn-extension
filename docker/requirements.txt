@@ -7,7 +7,7 @@ gputil==1.4.0
 hydra-core==1.0.3
 ipdb==0.13.2
 jupyter==1.0.0
-opencv-python==4.2.0.34
+opencv-python==4.8.1.78
 ortools==7.6.7691
 pandas==1.1.1
 pip-chill==1.0.0
